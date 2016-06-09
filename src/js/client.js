@@ -36,10 +36,7 @@ $(document).ready(function() {
 			connections[key].opened = true;
 
 			var pos = makeNewPosition(150),
-			    chatWindow = $("<div class='chatWindow'>").css({
-				top : pos[0],
-				left : pos[1]
-			}),
+			    chatWindow = $("<div class='chatWindow'>").css({top : pos[0],left : pos[1]}).attr("id","chatWindow-"+key.toString()),
 			    pageHeader = $("<div class='pageHeader' id='main-lobby-header'>").text(connection.username),
 			    messagesContainer = $("<div class='messagesContainer'>"),
 			    list = $("<ul class='messages'>").attr('id', "messages-" + key.toString() + ""),
@@ -62,15 +59,28 @@ $(document).ready(function() {
 			});
 
 			//addEventListener()
-		}
+		};
+		
+		function removeWindow(key,connection){
+			
+			connections[key].opened = false;
+			
+			removeEventListener(key.toString(),["click","keyup"]);
+			
+			$('#chatWindow-'+key.toString()).remove();
+		};
 
 		function findLinks(text) {
 			var regx = /(http|https|ftp|ftps)\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(\/\S*)?/;
 			return text.replace(regx, function(capture) {
-				return "<a href="+ capture + " target='_blank'> "+ capture +"</a>";
+				return "<a href=" + capture + " target='_blank'> " + capture + "</a>";
 			});
 		}
-
+		
+		this.removeChatWindow = function(id){
+			
+									
+		};
 
 		this.sendData = function(id) {
 			var sendTo = "#" + id.toString();
@@ -117,13 +127,13 @@ $(document).ready(function() {
 
 					console.log("clicked ", event.target.id);
 
-					//1.check if window is already open and focus on that window ??
-
-					//2.at remove delete event listeners, remove chat window, remove from openedWindows
+					//?? maybe if already there add animation ( brief ) 
+					
+					//2.at remove remove chat window
 
 					//3.keyup event listener
 
-					!connections[(event.target.id).toString()].opened ? createNewChatWindow(event.target.id, connections[(event.target.id).toString()]) : "do focus on window";
+					!connections[(event.target.id).toString()].opened ? createNewChatWindow(event.target.id, connections[(event.target.id).toString()]) :  $("#writtenText-"+(event.target.id).toString()).focus();
 
 					event.stopPropagation();
 				});
@@ -134,16 +144,16 @@ $(document).ready(function() {
 
 	(function() {
 		var handlers = [];
-
 		this.addEventListener = function(element, type, fn) {
 			$(element).on(type, fn);
 			handlers[element] = fn;
 		};
 
-		this.removeEventListener = function(element, type) {
-
+		this.removeEventListener = function(element, type) {			
+			for(var i = 0; i < type.length; i ++){
+				$(element).off(type[i], handlers[element]);	
+			}
 		};
-
 	})();
 
 	addEventListener('#writtenText-all', 'keyup', function(event) {
