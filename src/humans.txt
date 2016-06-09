@@ -1,0 +1,16 @@
+------------------------------------------------
+# The humans responsible & technology colophon #
+------------------------------------------------
+
+# TEAM
+
+    <Stefan Busnita> -- <software engineer>
+
+# THANKS
+
+    <HTML5 Boilerplate> by <Paul Irish> in <Aptana Web Projects>
+
+# TECHNOLOGY COLOPHON
+
+    CSS3, HTML5
+    Apache Server Configs, jQuery, Modernizr, Normalize.css, Express.js, Socket.io, Node.js
