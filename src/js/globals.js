@@ -1,13 +1,13 @@
 var globalFlags = {
-	absolute : {
+	absoluteP : {
 		path1 : 'C:/aptana_workspace/notifs/src/',
 		path2 : 'C:/Users/Stefan/Desktop/AptanaWorkspace/standalone-web-chat/src/'
 	},
 	paths : {
-			'html' : globalFlags.absolute.path2+'html',
-			'js' : globalFlags.absolute.path2+'js',
-			'styles' : globalFlags.absolute.path2+'css',
-			'img' : globalFlags.absolute.path2+'img'
+			'html' : 'C:/Users/Stefan/Desktop/AptanaWorkspace/standalone-web-chat/src/'+'html',
+			'js' : 'C:/Users/Stefan/Desktop/AptanaWorkspace/standalone-web-chat/src/'+'js',
+			'styles' : 'C:/Users/Stefan/Desktop/AptanaWorkspace/standalone-web-chat/src/'+'css',
+			'img' : 'C:/Users/Stefan/Desktop/AptanaWorkspace/standalone-web-chat/src/'+'img'
 		},
 	errors : {
 		SYSTEM : "System ERROR. Please check code for : "

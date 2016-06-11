@@ -40,12 +40,24 @@
 
 		});
 
-		registerSocketEvent(socket, 'chat message', function(msg) {
+		registerSocketEvent(socket, 'chat message', function(sentData) {
 			data = {
-				message : msg.message,
-				me : connections[msg.id].username
+				message : sentData.message,
+				me : connections[sentData.me]
 			};
+			
 			socket.broadcast.emit('chat message', data);
+											
+		});
+		
+		registerSocketEvent(socket, 'private message', function(sentData) {
+			data = {
+				message : sentData.message,
+				me : connections[sentData.me],
+				to : sentData.to
+			};
+			console.log("on server private message was ",data, sentData);
+			socket.broadcast.to(sentData.to.socketId).emit('private message', data);							
 		});
 
 	});
