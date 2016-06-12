@@ -5,7 +5,6 @@ $(document).ready(function() {
 		    data = {},
 		    username,
 		    connections = [],
-		    openedChats = [],
 		    notifications = [],
 		    notificationProperties = {
 			timeout : 2000
@@ -30,14 +29,13 @@ $(document).ready(function() {
 					body : theBody,
 					icon : theIcon
 				};
-				var n = new Notification(theTitle, options);
+				var notification = new Notification(theTitle, options);
 				setTimeout(function() {
-					n.close();
+					notification.close();
 				}, notificationProperties.timeout);
 			};
 
 			this.checkNotificationPermission = function() {
-				console.log("checking");
 				if (!("Notification" in window)) {
 					alert("This browser does not support desktop notification. Please use Mozilla or Chrome.");
 					return;
@@ -85,7 +83,32 @@ $(document).ready(function() {
 				removeEventListener(key.toString(), ["click", "keyup"]);
 
 				$('#chatWindow-' + key.toString()).remove();
-			}
+			},
+			windowOnFocus : (function() {
+				var event,
+				    transpozitionMap = {
+					hidden : "visibilitychange",
+					mozHidden : "mozvisibilitychange",
+					msHidden : "msvisibilitychange",
+					webkitHidden : "webkitvisibilitychange"
+				};
+
+				for (var hiddenArgument in transpozitionMap) {
+					if ( hiddenArgument in document) {
+						event = transpozitionMap[hiddenArgument];
+						break;
+					}
+				}
+
+				if (!event) {
+					//fallback for older browsers
+				}
+				return function(handler) {
+					if (handler)
+						addEventListener(document, event, handler);
+					return !document[hiddenArgument];
+				};
+			})()
 		};
 
 		function createNewChatWindow(key, connection) {
@@ -123,17 +146,19 @@ $(document).ready(function() {
 				handle : ".lobby-header"
 			});
 
-			/*
-			 addEventListener('.chatWindow', 'click', function(event) {
+			
+			 addEventListener('#chatWindow-' + key.toString(), 'click', function(event) {
 
 			 var maxZIndex = 0;
-			 var zIndex = $('.chatWindow').css("z-index");
+			 var zIndex = $('#chatWindow-' + key.toString()).css("z-index");
 
 			 max = Math.max(maxZIndex, zIndex);
 
-			 $('.chatWindow').css("z-index", max + 1);
+			 $('#chatWindow-' + key.toString()).css("z-index", max + 1);
+			 
+			 $(".chatWindow:not("+'#chatWindow-' + key.toString()+")").css("z-index", max - 1);;
 
-			 });*/
+			 });
 		};
 
 		this.removeChatWindow = function(id) {
@@ -145,7 +170,7 @@ $(document).ready(function() {
 			var elementId = "#" + id.toString(),
 			    connectionKeyOnClient = elementId.split("-")[1];
 
-			console.log(elementId, $(elementId).val(), connectionKeyOnClient, connections[connectionKeyOnClient] ? connections[connectionKeyOnClient].id : "");
+			//console.log(elementId, $(elementId).val(), connectionKeyOnClient, connections[connectionKeyOnClient] ? connections[connectionKeyOnClient].id : "");
 			data = {
 				message : $(elementId).val(),
 				me : socket.id,
@@ -169,24 +194,22 @@ $(document).ready(function() {
 				helperFunctions.updateScroll();
 
 			} else {
-				$('#messages-all').append($('<li>').text("You can't send an empty message."));
+				$('#messages-' + connectionKeyOnClient).append($('<li>').text("You can't send an empty message."));
 			}
 
 		};
 
 		socket.on('chat message', function(data) {
 
-			//add focus condition
-			//http://stackoverflow.com/questions/1760250/how-to-tell-if-browser-tab-is-active
-
-			spawnNotification(data.me.username + ": " + helperFunctions.findLinks(data.message), "", "Main lobby");
+			if (!helperFunctions.windowOnFocus()) {
+				spawnNotification(data.me.username + ": " + helperFunctions.findLinks(data.message), "", "Main lobby");
+			}
 
 			$('#messages-all').append($('<li>').html(data.me.username + " (" + (new Date()).toLocaleTimeString() + "): " + helperFunctions.findLinks(data.message)));
 			helperFunctions.updateScroll();
 		});
 
 		socket.on('private message', function(data) {
-			console.log("on client side prive message was ", data);
 			var connectionKeyOnClient;
 			for (var key in connections) {
 				if (connections[key].id == data.me.id) {
@@ -199,6 +222,9 @@ $(document).ready(function() {
 
 			if (!connections[connectionKeyOnClient].opened || connections[connectionKeyOnClient].opened == false) {
 				createNewChatWindow(connectionKeyOnClient, connections[connectionKeyOnClient]);
+
+				addEventListener('#writtenText-' + connectionKeyOnClient, 'keyup', keyUpHandler);
+
 			}
 
 			el = $('#chatWindow-' + connectionKeyOnClient);

@@ -22,11 +22,12 @@ to {
 }
 
 form {
-	background: #000;
+	background: #E0E0E0;
 	padding: 3px;
 	position: fixed;
 	bottom: 0;
 	width: 100%;
+	padding: 4px 0px 0px 1px;
 }
 form input {
 	border: 0;
@@ -85,6 +86,7 @@ form button {
 	width: 393px;
 	height: 350px;
 	overflow-y: scroll;
+	border-radius: 1px;
 }
 #onlineUsers {
 	border: 4px solid #CCC;
@@ -105,7 +107,7 @@ form button {
 	position: absolute
 }
 .chat-form-text {
-	width: 324px !important;
+	width: 329px !important;
 }
 .chat-window-close {
 	float: right;
