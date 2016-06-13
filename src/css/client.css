@@ -67,6 +67,20 @@ form button {
 	border-radius: 5px;
 	z-index : 1;
 }
+.chatWindow:not(#chatWindow-all){
+	 height : 444px;
+	 } 
+.chat-options-container{
+	background: #E0E0E0;
+    width: 100%;
+}
+.chat-buzz{
+	margin-top: 1px;
+	width: 28px;
+	padding: 0px;
+	margin: 3px;
+	height: 19px
+}
 .pageHeader {
 	/*
 	 border: 2px solid #CCC;

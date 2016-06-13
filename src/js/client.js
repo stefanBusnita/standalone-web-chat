@@ -2,6 +2,7 @@ $(document).ready(function() {
 
 	(function() {
 		var socket = io(),
+		//ss = require('socket.io-stream'),
 		    data = {},
 		    username,
 		    connections = [],
@@ -78,8 +79,10 @@ $(document).ready(function() {
 				return [randomHeight, randomWidth];
 			},
 			removeWindow : function(key) {
-				connections[key].opened = false;
 
+				if (connections[key]) {
+					connections[key].opened = false;
+				}
 				removeEventListener(key.toString(), ["click", "keyup"]);
 
 				$('#chatWindow-' + key.toString()).remove();
@@ -111,6 +114,32 @@ $(document).ready(function() {
 			})()
 		};
 
+		var typing = false;
+
+		this.doTypingMessage = function(id) {
+
+			var socketId,
+			    timeout;
+			for (var key in connections) {
+				console.log(key, id);
+				if (key === id.split("-")[1]) {
+					socketId = connections[key].id;
+					break;
+				}
+			}
+
+			data = {
+				me : socket.id,
+				to : socketId,
+				message : username + " is typeing..."
+			};
+
+			console.log(data);
+			/*
+			 socket.emit('typeing', data);	*/
+
+		};
+
 		function createNewChatWindow(key, connection) {
 
 			connections[key].opened = true;
@@ -125,6 +154,11 @@ $(document).ready(function() {
 				'onclick' : "removeChatWindow(this.id)"
 			});
 			pageHeader = $("<div class='pageHeader' id='main-lobby-header'>").text(connection.username),
+			optionsContainer = $("<div class='chat-options-container'></div>"),
+			buzzButton = $("<button class='btn btn-default chat-buzz'><span class='glyphicon glyphicon-bell'></span></button>").attr({
+				'id' : 'buzz-' + key.toString(),
+				'onclick' : "buzz(this.id)"
+			}),
 			messagesContainer = $("<div class='messagesContainer'>"),
 			list = $("<ul class='messages'>").attr('id', "messages-" + key.toString() + ""),
 			form = $("<form class='form-inline chat-form' id='formTst' action='' onsubmit='return false;'>"),
@@ -137,7 +171,8 @@ $(document).ready(function() {
 			messagesContainer.append(list);
 			form.append(sendButton, textToSend);
 			pageHeader.append(closeButton);
-			chatWindow.append(pageHeader, messagesContainer, form);
+			optionsContainer.append(buzzButton);
+			chatWindow.append(pageHeader, messagesContainer, optionsContainer, form);
 
 			$(document.body).append(chatWindow);
 
@@ -146,23 +181,35 @@ $(document).ready(function() {
 				handle : ".lobby-header"
 			});
 
-			
-			 addEventListener('#chatWindow-' + key.toString(), 'click', function(event) {
+			addEventListener('#chatWindow-' + key.toString(), 'click', function(event) {
 
-			 var maxZIndex = 0;
-			 var zIndex = $('#chatWindow-' + key.toString()).css("z-index");
+				var maxZIndex = 0;
+				var zIndex = $('#chatWindow-' + key.toString()).css("z-index");
 
-			 max = Math.max(maxZIndex, zIndex);
+				max = Math.max(maxZIndex, zIndex);
 
-			 $('#chatWindow-' + key.toString()).css("z-index", max + 1);
-			 
-			 $(".chatWindow:not("+'#chatWindow-' + key.toString()+")").css("z-index", max - 1);;
+				$('#chatWindow-' + key.toString()).css("z-index", max + 1);
 
-			 });
+				$(".chatWindow:not(" + '#chatWindow-' + key.toString() + ")").css("z-index", max - 1);
+				;
+
+			});
 		};
 
 		this.removeChatWindow = function(id) {
 			helperFunctions.removeWindow(id.split("-")[1]);
+		};
+
+		this.buzz = function(id) {
+
+			var connectionKeyOnClient = id.split("-")[1];
+			console.log(connectionKeyOnClient,id);
+			data = {
+				id : connections[connectionKeyOnClient].id,
+				me : socket.id
+			};
+			//append to my interface the fact that he was buzzed
+			socket.emit('buzz', data);
 		};
 
 		this.sendData = function(id) {
@@ -209,6 +256,23 @@ $(document).ready(function() {
 			helperFunctions.updateScroll();
 		});
 
+		socket.on('buzz', function(data) {
+
+			/*
+			var connectionKeyOnClient;
+						for (var key in connections) {
+							if (connections[key].id == data.me) {
+								connectionKeyOnClient = key;
+								break;
+							}
+						}*/
+			
+			// append to interface, check if it is open ( if not open it )   CHECK PRIVATE MESSAGE IMPL, maybe do a funny func move
+			
+			var audio = new Audio('static/doorbell.wav');
+			audio.play();
+		});
+
 		socket.on('private message', function(data) {
 			var connectionKeyOnClient;
 			for (var key in connections) {
@@ -240,20 +304,39 @@ $(document).ready(function() {
 
 		socket.on('username', function(data) {
 
-			if (data === "has") {
+			if (data.errorCode === 1) {// add from global
 				alert("username already chosen");
 				$("#myModal").modal();
 				return;
 			}
 
-			username = data;
+			username = data.username;
 		});
 
-		socket.on('update', function(users) {
+		socket.on('update', function(data) {
+
+			var connectionKeyOnClient;
+			for (var key in connections) {//change to helper function
+				if (connections[key].id == "/#" + data.disconnected && connections[key].opened == true) {
+					connectionKeyOnClient = key;
+					break;
+				}
+			}
+
+			if (connectionKeyOnClient) {
+				$('#messages-' + connectionKeyOnClient).append($('<li>').html("User disconnected from chat."));
+				$('#writtenText-' + connectionKeyOnClient).attr({
+					"disabled" : true
+				});
+				if (!helperFunctions.windowOnFocus()) {
+					spawnNotification(connections[key].username + " disconnected", "", "User disconnected");
+				}
+			}
+
 			$('#users').empty();
-			connections = users;
-			for (var key in users) {
-				$('#users').append($('<li>').addClass('user').attr('id', key.toString()).text(users[key.toString()].username));
+			connections = data.updatedList;
+			for (var key in data.updatedList) {
+				$('#users').append($('<li>').addClass('user').attr('id', key.toString()).text(data.updatedList[key.toString()].username));
 
 				addEventListener('#' + key.toString(), 'click', function(event) {
 
@@ -269,6 +352,7 @@ $(document).ready(function() {
 				});
 			}
 		});
+
 	})();
 
 	(function() {
@@ -295,6 +379,8 @@ $(document).ready(function() {
 		var keycode = (event.keyCode ? event.keyCode : event.which);
 		if (keycode == '13') {
 			sendData(event.target.id);
+		} else {
+			doTypingMessage(event.target.id);
 		}
 		event.preventDefault();
 		event.stopPropagation();

@@ -3,20 +3,32 @@
 	    http = require('http').Server(app),
 	    globals = require(__dirname + '/globals.js'),
 	    io = require('socket.io')(http),
+	    ss = require('socket.io-stream'),
 	    connections = [],
 	    express = require("express"),
 	    data = {},
 	    noUsers = 0;
-
-	app.use("/scripts", express.static(globals.paths['js']));
-	app.use("/styles", express.static(globals.paths['styles']));
-	app.use("/images", express.static(globals.paths['img']));
+	console.log(__dirname);
+	app.use("/scripts", express.static(__dirname));
+	app.use("/styles", express.static(__dirname + '/../css'));
+	app.use("/images", express.static(__dirname + '/../img'));
+	app.use("/static", express.static(__dirname + '/../sounds'));
 
 	io.on('connection', function(socket) {
 
+		/*
+		 ss(socket).on('profile-image', function(stream, data) {
+		 var filename = path.basename(data.name);
+		 stream.pipe(fs.createWriteStream(filename));
+		 });*/
+
 		registerSocketEvent(socket, 'disconnect', function() {
 			delete connections[socket.conn.id];
-			io.emit('update', toObject(connections));
+			data = {
+				updatedList : toObject(connections),
+				disconnected : socket.conn.id
+			};
+			io.emit('update', data);
 		});
 
 		registerSocketEvent(socket, 'username', function(username) {
@@ -26,16 +38,29 @@
 			}
 
 			if (checkForExistingUser(username)) {
+				data = {
+					username : "",
+					errorCode : globalFlags.errors.USER_EXISTS
+				};
 				socket.emit('username', "has");
 				return;
+
 			} else {
 				connections[socket.conn.id] = {
 					"id" : socket.id,
 					"username" : username
 				};
-				console.log("a trecut mai departe");
-				socket.emit('username', username);
-				io.emit('update', toObject(connections));
+
+				socket.emit('username', {
+					username : username
+				});
+
+				data = {
+					updatedList : toObject(connections),
+					disconnected : socket.conn.id
+				};
+
+				io.emit('update', data);
 			}
 
 		});
@@ -45,19 +70,23 @@
 				message : sentData.message,
 				me : connections[sentData.me]
 			};
-			
+
 			socket.broadcast.emit('chat message', data);
-											
+
 		});
-		
+
+		registerSocketEvent(socket, 'buzz', function(sentData) {
+			socket.broadcast.to(sentData.id).emit('buzz', sentData);
+		});
+
 		registerSocketEvent(socket, 'private message', function(sentData) {
 			data = {
 				message : sentData.message,
 				me : connections[sentData.me],
 				to : sentData.to
 			};
-			console.log("on server private message was ",data, sentData);
-			socket.broadcast.to(sentData.to.socketId).emit('private message', data);							
+			console.log("on server private message was ", data, sentData);
+			socket.broadcast.to(sentData.to.socketId).emit('private message', data);
 		});
 
 	});
@@ -105,19 +134,19 @@
 	};
 
 	function checkForExistingUser(username) {
-		
+
 		for (var key in connections) {
 			if (connections[key].username == username)
 				return true;
 		}
 		return false;
-		
+
 	}
 
 
 	app.get('/', function(req, res) {
 		res.sendFile('template.html', {
-			"root" : globals.paths.html
+			"root" : __dirname +'/../html'
 		});
 	});
 

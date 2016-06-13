@@ -6,7 +6,9 @@
 		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
 		<script src="http://code.jquery.com/ui/1.9.2/jquery-ui.js"></script>
 		<script src="/socket.io/socket.io.js"></script>
+		<script type="text/javascript" src="bundle.js"></script>
 		<script src="/scripts/client.js" type='text/javascript'></script>
+		<script src="/scripts/bundle.js"></script>
 		<link rel="stylesheet" type="text/css" href="/styles/client.css">
 	</head>
 	<body>
@@ -33,22 +35,28 @@
 
 			</div>
 		</div>
-		<div class="chatWindow">
-			<div class="pageHeader lobby-header" >Main lobby
-				</div>
+		<div class="chatWindow" id="chatWindow-all">
+			<div class="pageHeader lobby-header" >
+				Main lobby
+			</div>
 			<div class="messagesContainer">
 				<ul class="messages" id="messages-all"></ul>
 			</div>
 			<form class="form-inline chat-form" action="" onsubmit="return false;">
 				<input class="sendButton btn-success btn" id="all" type = "button" name="data" onclick="sendData('writtenText-'+this.id)" value="Send"/>
-				<input id="writtenText-all" class="form-control chat-form-text" placeholder="Write your message here..."  autocomplete="off" />				
+				<input id="writtenText-all" class="form-control chat-form-text" placeholder="Write your message here..."  autocomplete="off" />
 			</form>
 		</div>
-		
+
 		<div id="onlineUsers" >
-			<div class="pageHeader">Online users<button class="btn btn-success notifications-button" onclick="notifyMe()">Notification options</button></div>
+			<div class="pageHeader">
+				Online users
+				<button class="btn btn-success notifications-button" onclick="notifyMe()">
+					Notification options
+				</button>
+			</div>
 			<ul id="users" style="list-style-type:none">
-				
+
 			</ul>
 		</div>
 	</body>
