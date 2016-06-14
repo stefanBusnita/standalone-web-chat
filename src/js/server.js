@@ -8,7 +8,9 @@
 	    express = require("express"),
 	    data = {},
 	    noUsers = 0;
-	console.log(__dirname);
+	var path = require('path');
+	var fs = require('fs');
+	
 	app.use("/scripts", express.static(__dirname));
 	app.use("/styles", express.static(__dirname + '/../css'));
 	app.use("/images", express.static(__dirname + '/../img'));
@@ -16,11 +18,21 @@
 
 	io.on('connection', function(socket) {
 
-		/*
-		 ss(socket).on('profile-image', function(stream, data) {
-		 var filename = path.basename(data.name);
-		 stream.pipe(fs.createWriteStream(filename));
-		 });*/
+		ss(socket).on('file', function(stream, data) {
+			//var filename = path.basename(data.name);
+			console.log(data.size);
+			var size = 0;
+						
+			//stream.pipe(fs.createWriteStream(data));		
+			/*
+			ss(socket).emit('file', stream, {
+							size : file.size
+						});
+						ss.createBlobReadStream(file).pipe(stream);			*/
+			
+		});
+
+		
 
 		registerSocketEvent(socket, 'disconnect', function() {
 			delete connections[socket.conn.id];
@@ -75,7 +87,7 @@
 
 		});
 
-		registerSocketEvent(socket, 'buzz', function(sentData) {
+		registerSocketEvent(socket, 'buzz', function(sentData) {			
 			socket.broadcast.to(sentData.id).emit('buzz', sentData);
 		});
 
@@ -146,7 +158,7 @@
 
 	app.get('/', function(req, res) {
 		res.sendFile('template.html', {
-			"root" : __dirname +'/../html'
+			"root" : __dirname + '/../html'
 		});
 	});
 

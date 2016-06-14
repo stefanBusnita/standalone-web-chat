@@ -59,7 +59,7 @@ form button {
 .chatWindow {
 	border: 3px solid #CCC;
 	width: 400px;
-	height: 421px;
+	height: 449px;	/*421px;*/
 	position: absolute;
 	left: 50%;
 	top: 50%;

@@ -2,7 +2,7 @@ $(document).ready(function() {
 
 	(function() {
 		var socket = io(),
-		//ss = require('socket.io-stream'),
+		    ss = require('socket.io-stream'),
 		    data = {},
 		    username,
 		    connections = [],
@@ -10,6 +10,69 @@ $(document).ready(function() {
 		    notificationProperties = {
 			timeout : 2000
 		};
+
+		var stream = ss.createStream();
+		var filename = 'background.png';
+		var fs = require('fs');
+
+		/*
+		 ss(socket).emit('profile-image', stream, {
+		 name : filename
+		 });*/
+
+		$('#file').change(function(e) {
+			var file = e.target.files[0];
+			var stream = ss.createStream();
+
+			// upload a file to the server.
+			ss(socket).emit('file', stream, {
+				size : file.size
+			});
+			var blobStream = ss.createBlobReadStream(file);
+			var size = 0;
+
+			blobStream.on('data', function(chunk) {
+				size += chunk.length;
+				console.log(Math.floor(size / file.size * 100) + '%');
+			});
+
+			blobStream.pipe(stream);
+
+		});
+
+		ss(socket).on('file', function(data) {
+			console.log(data);
+			//downloadFileFromBlob([data], "gigi.jpg");
+		});
+
+		/*
+		 var downloadFileFromBlob = ( function() {
+		 var a = document.createElement("a");
+		 document.body.appendChild(a);
+		 a.style = "display: none";
+		 return function(data, fileName) {
+		 var blob = new Blob(data, {
+		 type : "octet/stream"
+		 }),
+		 url = window.URL.createObjectURL(blob);
+		 a.href = url;
+		 a.download = fileName;
+		 a.click();
+		 window.URL.revokeObjectURL(url);
+		 };
+		 }());*/
+
+		/*
+		 //send data
+		 ss(socket).on('file', function(stream) {
+		 fs.createReadStream('/path/to/file').pipe(stream);
+		 });
+
+		 // receive data
+		 ss(socket).emit('file', stream);
+		 stream.pipe(fs.createWriteStream('file.txt'));
+
+		 */
 
 		$("#myModal").modal();
 		$('.chatWindow').draggable({
@@ -203,12 +266,15 @@ $(document).ready(function() {
 		this.buzz = function(id) {
 
 			var connectionKeyOnClient = id.split("-")[1];
-			console.log(connectionKeyOnClient,id);
+			console.log(connectionKeyOnClient, id);
 			data = {
 				id : connections[connectionKeyOnClient].id,
 				me : socket.id
 			};
 			//append to my interface the fact that he was buzzed
+			
+			$('#messages-'+connectionKeyOnClient).append($('<li>').html("You buzzed ! (" + (new Date()).toLocaleTimeString() + ")"));
+			
 			socket.emit('buzz', data);
 		};
 
@@ -258,17 +324,35 @@ $(document).ready(function() {
 
 		socket.on('buzz', function(data) {
 
-			/*
 			var connectionKeyOnClient;
-						for (var key in connections) {
-							if (connections[key].id == data.me) {
-								connectionKeyOnClient = key;
-								break;
-							}
-						}*/
+			for (var key in connections) {				
+				if (connections[key].id == "/#"+data.me) {
+					connectionKeyOnClient = key;
+					break;
+				}
+			}
 			
-			// append to interface, check if it is open ( if not open it )   CHECK PRIVATE MESSAGE IMPL, maybe do a funny func move
-			
+			console.log(connectionKeyOnClient);
+
+			if (!connections[connectionKeyOnClient].opened || connections[connectionKeyOnClient].opened == false) {
+				createNewChatWindow(connectionKeyOnClient, connections[connectionKeyOnClient]);
+
+				addEventListener('#writtenText-' + connectionKeyOnClient, 'keyup', keyUpHandler);
+
+			}
+
+			el = $('#messages-' + connectionKeyOnClient);
+
+			$('#messages-' + connectionKeyOnClient).append($('<li>').html("Buzzzzzzz ring ding ! (" + (new Date()).toLocaleTimeString() + ")"));
+
+			if (!el.is(":focus")) {
+				helperFunctions.shakeAnimation(el);
+			}
+
+			helperFunctions.updateScroll();
+
+			// maybe do a funny func move
+
 			var audio = new Audio('static/doorbell.wav');
 			audio.play();
 		});
@@ -291,7 +375,7 @@ $(document).ready(function() {
 
 			}
 
-			el = $('#chatWindow-' + connectionKeyOnClient);
+			el = $('#messages-' + connectionKeyOnClient);
 
 			$('#messages-' + connectionKeyOnClient).append($('<li>').html(data.me.username + " (" + (new Date()).toLocaleTimeString() + "): " + helperFunctions.findLinks(data.message)));
 
