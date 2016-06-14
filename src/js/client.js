@@ -345,8 +345,6 @@ $(document).ready(function() {
 				}
 			}
 
-			console.log(connectionKeyOnClient);
-
 			if (!connections[connectionKeyOnClient].opened || connections[connectionKeyOnClient].opened == false) {
 				createNewChatWindow(connectionKeyOnClient, connections[connectionKeyOnClient]);
 
@@ -397,6 +395,38 @@ $(document).ready(function() {
 			helperFunctions.updateScroll();
 		});
 
+		function statusChangeHandler(event) {			
+			data = {//TODO
+				me : socket.id,
+				status : $(this).val()
+			};
+			socket.emit('status change', data);
+		};
+
+		socket.on("status change", function(data) {
+
+			var connectionKeyOnClient;
+			for (var key in connections) {
+				if (connections[key].id == "/#" + data.me) {
+					connections[key].status = data.status;
+			// create transpozition for this one with text, and write text as title attr
+					if (data.status == 1) {
+						$('#' + key.toString()).removeClass('busy');
+						$('#' + key.toString()).removeClass('away');
+					} else if (data.status == 2 || data.status == 3) {
+						$('#' + key.toString()).removeClass('away');
+						$('#' + key.toString()).addClass('busy');
+					} else {
+						$('#' + key.toString()).removeClass('busy');
+						$('#' + key.toString()).addClass('away');
+					}
+					$('#' + key.toString()).removeClass('user');
+					$('#' + key.toString()).addClass('user');
+					break;
+				}
+			}
+		});
+
 		socket.on('username', function(data) {
 
 			if (data.errorCode === 1) {// add from global
@@ -406,6 +436,8 @@ $(document).ready(function() {
 			}
 
 			username = data.username;
+			$("option[value='1']").attr('selected', 'selected');
+			addEventListener('.chat-status', 'change', statusChangeHandler);
 		});
 
 		socket.on('update', function(data) {
@@ -438,24 +470,13 @@ $(document).ready(function() {
 				client = data.updatedList[key.toString()];
 
 				console.log(client, socket.id);
+				var li = $('<li>').addClass('user').attr('id', key.toString()).text(client.username + " " + client.location.city + " - " + client.location.country);
 
-
-				// NOT OK, NEVER FIRST IN LIST, FIND ANOTHER SOLUTION
-				var li = $('<li>').addClass('user').attr('id', key.toString()).text(client.username + " " + client.location.city + " - " + client.location.country),
-				    select = $('<select>').attr({
-					'id' : "smth"
-				});
-				//TODO
-
-				li.append(select);
-				//TODO
 				$('#users').append(li);
 
-				if (client.id != '/#' + socket.id) { //TODO
+				if (client.id != '/#' + socket.id) {
 
 					addEventListener('#' + key.toString(), 'click', function(event) {
-						console.log(event.target.id);
-						//TODO
 						!connections[(event.target.id).toString()].opened ? createNewChatWindow(event.target.id, connections[(event.target.id).toString()]) : (function() {
 							var element = $("#writtenText-" + (event.target.id).toString());
 							helperFunctions.shakeAnimation(element);

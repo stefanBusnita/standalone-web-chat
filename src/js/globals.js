@@ -4,7 +4,7 @@ var globalFlags = {
 		USER_EXISTS : 1
 	},
 	status : {
-		AVAILABLE : 2
+		AVAILABLE : 1
 	}
 
 };

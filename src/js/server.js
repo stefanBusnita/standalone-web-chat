@@ -62,7 +62,7 @@
 					"id" : socket.id,
 					"username" : data.username,
 					"location" : data.location,
-					"status" : 1 //globalFlags.status.AVAILABLE
+					"status" : globalFlags.status.AVAILABLE
 				};
 
 				socket.emit('username', {
@@ -91,6 +91,12 @@
 
 		registerSocketEvent(socket, 'buzz', function(sentData) {			
 			socket.broadcast.to(sentData.id).emit('buzz', sentData);
+		});
+		
+		registerSocketEvent(socket, 'status change', function(sentData) {
+			connections[sentData.me].status = sentData.status;		
+			console.log(connections[sentData.me]);
+			io.emit('status change', sentData);
 		});
 
 		registerSocketEvent(socket, 'private message', function(sentData) {

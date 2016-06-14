@@ -2270,30 +2270,10 @@ module.exports = function (obj) {
 
 var process = module.exports = {};
 
-// cached from whatever global is present so that test runners that stub it
-// don't break things.  But we need to wrap it in a try catch in case it is
-// wrapped in strict mode code which doesn't define any globals.  It's inside a
-// function because try/catches deoptimize in certain engines.
+// cached from whatever global is present so that test runners that stub it don't break things.
+var cachedSetTimeout = setTimeout;
+var cachedClearTimeout = clearTimeout;
 
-var cachedSetTimeout;
-var cachedClearTimeout;
-
-(function () {
-  try {
-    cachedSetTimeout = setTimeout;
-  } catch (e) {
-    cachedSetTimeout = function () {
-      throw new Error('setTimeout is not defined');
-    }
-  }
-  try {
-    cachedClearTimeout = clearTimeout;
-  } catch (e) {
-    cachedClearTimeout = function () {
-      throw new Error('clearTimeout is not defined');
-    }
-  }
-} ())
 var queue = [];
 var draining = false;
 var currentQueue;
@@ -7133,8 +7113,6 @@ $(document).ready(function() {
 				}
 			}
 
-			console.log(connectionKeyOnClient);
-
 			if (!connections[connectionKeyOnClient].opened || connections[connectionKeyOnClient].opened == false) {
 				createNewChatWindow(connectionKeyOnClient, connections[connectionKeyOnClient]);
 
@@ -7185,6 +7163,38 @@ $(document).ready(function() {
 			helperFunctions.updateScroll();
 		});
 
+		function statusChangeHandler(event) {			
+			data = {//TODO
+				me : socket.id,
+				status : $(this).val()
+			};
+			socket.emit('status change', data);
+		};
+
+		socket.on("status change", function(data) {
+
+			var connectionKeyOnClient;
+			for (var key in connections) {
+				if (connections[key].id == "/#" + data.me) {
+					connections[key].status = data.status;
+			// create transpozition for this one with text, and write text as title attr
+					if (data.status == 1) {
+						$('#' + key.toString()).removeClass('busy');
+						$('#' + key.toString()).removeClass('away');
+					} else if (data.status == 2 || data.status == 3) {
+						$('#' + key.toString()).removeClass('away');
+						$('#' + key.toString()).addClass('busy');
+					} else {
+						$('#' + key.toString()).removeClass('busy');
+						$('#' + key.toString()).addClass('away');
+					}
+					$('#' + key.toString()).removeClass('user');
+					$('#' + key.toString()).addClass('user');
+					break;
+				}
+			}
+		});
+
 		socket.on('username', function(data) {
 
 			if (data.errorCode === 1) {// add from global
@@ -7194,6 +7204,8 @@ $(document).ready(function() {
 			}
 
 			username = data.username;
+			$("option[value='1']").attr('selected', 'selected');
+			addEventListener('.chat-status', 'change', statusChangeHandler);
 		});
 
 		socket.on('update', function(data) {
@@ -7226,22 +7238,13 @@ $(document).ready(function() {
 				client = data.updatedList[key.toString()];
 
 				console.log(client, socket.id);
+				var li = $('<li>').addClass('user').attr('id', key.toString()).text(client.username + " " + client.location.city + " - " + client.location.country);
 
-				var li = $('<li>').addClass('user').attr('id', key.toString()).text(client.username + " " + client.location.city + " - " + client.location.country),
-				    select = $('<select>').attr({
-					'id' : "smth"
-				});
-				//TODO
-
-				li.append(select);
-				//TODO
 				$('#users').append(li);
 
 				if (client.id != '/#' + socket.id) {
 
 					addEventListener('#' + key.toString(), 'click', function(event) {
-						console.log(event.target.id);
-						//TODO
 						!connections[(event.target.id).toString()].opened ? createNewChatWindow(event.target.id, connections[(event.target.id).toString()]) : (function() {
 							var element = $("#writtenText-" + (event.target.id).toString());
 							helperFunctions.shakeAnimation(element);

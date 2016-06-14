@@ -49,13 +49,20 @@
 
 		<div id="onlineUsers" >
 			<div class="pageHeader">
-				Online users	
-				<div id="chat-users-no"></div>	
-				<button class="btn btn-success notifications-button" onclick="notifyMe()">
-					Notification options
+				Online users
+				<div id="chat-users-no"></div>
+				<span>Status</span>
+				<select class="chat-status">
+					<option value="1">Available</option>
+					<option value="2">Busy</option>
+					<option value="3">Do not disturb</option>
+					<option value="4">Away</option>
+				</select>
+				<button class="btn btn-default notifications-button" onclick="notifyMe()">
+					<span class='glyphicon glyphicon-cog'></span>
 				</button>
 			</div>
-			<ul id="users" ></ul>			
+			<ul id="users" ></ul>
 		</div>
 	</body>
 </html>
