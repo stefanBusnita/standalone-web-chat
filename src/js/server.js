@@ -43,28 +43,30 @@
 			io.emit('update', data);
 		});
 
-		registerSocketEvent(socket, 'username', function(username) {
-
-			if (!username) {
-				username += "potato" + Math.floor(Math.random() * 1000) + 1;
+		registerSocketEvent(socket, 'username', function(data) {
+			
+			if (!data.username) {
+				data.username += "potato" + Math.floor(Math.random() * 1000) + 1;
 			}
 
-			if (checkForExistingUser(username)) {
+			if (checkForExistingUser(data.username)) {
 				data = {
 					username : "",
 					errorCode : globalFlags.errors.USER_EXISTS
 				};
-				socket.emit('username', "has");
+				socket.emit('username', data);
 				return;
 
 			} else {
 				connections[socket.conn.id] = {
 					"id" : socket.id,
-					"username" : username
+					"username" : data.username,
+					"location" : data.location,
+					"status" : 1 //globalFlags.status.AVAILABLE
 				};
 
 				socket.emit('username', {
-					username : username
+					username : data.username
 				});
 
 				data = {

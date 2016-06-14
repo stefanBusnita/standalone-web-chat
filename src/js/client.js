@@ -83,8 +83,19 @@ $(document).ready(function() {
 
 		$('#myModal').on('hidden.bs.modal', function() {
 			checkNotificationPermission();
-			socket.emit('username', $('#username').val());
+			$.get("http://ipinfo.io", doLocationCallback, "jsonp").fail(doLocationCallback);
 		});
+
+		function doLocationCallback(response) {
+			data = {
+				username : $('#username').val(),
+				location : {
+					city : response && response.city ? response.city : "",
+					country : response && response.country ? response.country : ""
+				}
+			};
+			socket.emit('username', data);
+		}
 
 		//remove notifications as the user requests.
 		(function() {
@@ -272,9 +283,9 @@ $(document).ready(function() {
 				me : socket.id
 			};
 			//append to my interface the fact that he was buzzed
-			
-			$('#messages-'+connectionKeyOnClient).append($('<li>').html("You buzzed ! (" + (new Date()).toLocaleTimeString() + ")"));
-			
+
+			$('#messages-' + connectionKeyOnClient).append($('<li>').html("You buzzed ! (" + (new Date()).toLocaleTimeString() + ")"));
+
 			socket.emit('buzz', data);
 		};
 
@@ -282,6 +293,8 @@ $(document).ready(function() {
 
 			var elementId = "#" + id.toString(),
 			    connectionKeyOnClient = elementId.split("-")[1];
+
+			//check in connections if i am the certain user, and do stuff i guess ?? //TODO
 
 			//console.log(elementId, $(elementId).val(), connectionKeyOnClient, connections[connectionKeyOnClient] ? connections[connectionKeyOnClient].id : "");
 			data = {
@@ -325,13 +338,13 @@ $(document).ready(function() {
 		socket.on('buzz', function(data) {
 
 			var connectionKeyOnClient;
-			for (var key in connections) {				
-				if (connections[key].id == "/#"+data.me) {
+			for (var key in connections) {
+				if (connections[key].id == "/#" + data.me) {
 					connectionKeyOnClient = key;
 					break;
 				}
 			}
-			
+
 			console.log(connectionKeyOnClient);
 
 			if (!connections[connectionKeyOnClient].opened || connections[connectionKeyOnClient].opened == false) {
@@ -346,7 +359,7 @@ $(document).ready(function() {
 			$('#messages-' + connectionKeyOnClient).append($('<li>').html("Buzzzzzzz ring ding ! (" + (new Date()).toLocaleTimeString() + ")"));
 
 			if (!el.is(":focus")) {
-				helperFunctions.shakeAnimation(el);
+				helperFunctions.shakeAnimation($('#chatWindow-' + connectionKeyOnClient));
 			}
 
 			helperFunctions.updateScroll();
@@ -366,8 +379,6 @@ $(document).ready(function() {
 				}
 			}
 
-			//consider on click add 1 to z-index ( or more ), this way it can always be on top ( desktop like )
-
 			if (!connections[connectionKeyOnClient].opened || connections[connectionKeyOnClient].opened == false) {
 				createNewChatWindow(connectionKeyOnClient, connections[connectionKeyOnClient]);
 
@@ -380,7 +391,7 @@ $(document).ready(function() {
 			$('#messages-' + connectionKeyOnClient).append($('<li>').html(data.me.username + " (" + (new Date()).toLocaleTimeString() + "): " + helperFunctions.findLinks(data.message)));
 
 			if (!el.is(":focus")) {
-				helperFunctions.shakeAnimation(el);
+				helperFunctions.shakeAnimation($('#chatWindow-' + connectionKeyOnClient));
 			}
 
 			helperFunctions.updateScroll();
@@ -419,22 +430,46 @@ $(document).ready(function() {
 
 			$('#users').empty();
 			connections = data.updatedList;
+			var size = 0,
+			    client;
+
 			for (var key in data.updatedList) {
-				$('#users').append($('<li>').addClass('user').attr('id', key.toString()).text(data.updatedList[key.toString()].username));
+				size++;
+				client = data.updatedList[key.toString()];
 
-				addEventListener('#' + key.toString(), 'click', function(event) {
+				console.log(client, socket.id);
 
-					!connections[(event.target.id).toString()].opened ? createNewChatWindow(event.target.id, connections[(event.target.id).toString()]) : (function() {
-						var element = $("#writtenText-" + (event.target.id).toString());
-						helperFunctions.shakeAnimation(element);
-						element.focus();
-					})();
 
-					addEventListener('#writtenText-' + event.target.id, 'keyup', keyUpHandler);
-
-					event.stopPropagation();
+				// NOT OK, NEVER FIRST IN LIST, FIND ANOTHER SOLUTION
+				var li = $('<li>').addClass('user').attr('id', key.toString()).text(client.username + " " + client.location.city + " - " + client.location.country),
+				    select = $('<select>').attr({
+					'id' : "smth"
 				});
+				//TODO
+
+				li.append(select);
+				//TODO
+				$('#users').append(li);
+
+				if (client.id != '/#' + socket.id) { //TODO
+
+					addEventListener('#' + key.toString(), 'click', function(event) {
+						console.log(event.target.id);
+						//TODO
+						!connections[(event.target.id).toString()].opened ? createNewChatWindow(event.target.id, connections[(event.target.id).toString()]) : (function() {
+							var element = $("#writtenText-" + (event.target.id).toString());
+							helperFunctions.shakeAnimation(element);
+							element.focus();
+						})();
+
+						addEventListener('#writtenText-' + event.target.id, 'keyup', keyUpHandler);
+
+						event.stopPropagation();
+					}, false);
+
+				}
 			}
+			$('#chat-users-no').text(size);
 		});
 
 	})();

@@ -46,6 +46,33 @@ form button {
 	margin: 0;
 	padding: 0;
 }
+#users > li:hover {
+	background: #eee;
+	cursor: pointer;
+}
+#users>li{
+	margin-bottom:3px;
+}
+#users>li:before {
+    content: "●";
+    display: block;
+    float: left;
+    width: 1.2em;
+    color: #449d44;
+    vertical-align: middle;
+}
+#users{
+	list-style-type: "✳️";
+}
+#chat-users-no {
+	width: 37px;
+	display: inline-block;
+	background-color: black;
+	border-radius: 16px;
+	color: white;
+	border: radiu;
+	text-align: center;
+}
 .messages li {
 	padding: 5px 10px;
 }
@@ -65,16 +92,16 @@ form button {
 	top: 50%;
 	margin: -25px 0 0 -50px;
 	border-radius: 5px;
-	z-index : 1;
+	z-index: 1;
 }
 .chatWindow:not(#chatWindow-all){
-	 height : 444px;
-	 } 
-.chat-options-container{
-	background: #E0E0E0;
-    width: 100%;
+height : 444px;
 }
-.chat-buzz{
+.chat-options-container {
+	background: #E0E0E0;
+	width: 100%;
+}
+.chat-buzz {
 	margin-top: 1px;
 	width: 28px;
 	padding: 0px;
@@ -131,30 +158,30 @@ form button {
 }
 
 @keyframes shake {
-  10%, 90% {
-    transform: translate3d(-1px, 0, 0);
-  }
-  
-  20%, 80% {
-    transform: translate3d(2px, 0, 0);
-  }
+10%, 90% {
+transform: translate3d(-1px, 0, 0);
+}
 
-  30%, 50%, 70% {
-    transform: translate3d(-4px, 0, 0);
-  }
+20%, 80% {
+transform: translate3d(2px, 0, 0);
+}
 
-  40%, 60% {
-    transform: translate3d(4px, 0, 0);
-  }
+30%, 50%, 70% {
+transform: translate3d(-4px, 0, 0);
+}
+
+40%, 60% {
+transform: translate3d(4px, 0, 0);
+}
 }
 
 .shake {
-    -webkit-animation: shake .7s 1;
-    -moz-animation: shake .7s 1;
-    -o-animation: shake .7s 1;
-    animation: shake .7s 1;
+	-webkit-animation: shake .7s 1;
+	-moz-animation: shake .7s 1;
+	-o-animation: shake .7s 1;
+	animation: shake .7s 1;
 }
-.notifications-button{
+.notifications-button {
 	float: right;
 	height: inherit;
 	padding: 0px 20px;
