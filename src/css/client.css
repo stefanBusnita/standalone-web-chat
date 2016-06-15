@@ -79,9 +79,9 @@ form button {
 #chat-users-no {
 	width:37px;
 	display:inline-block;
-	background-color:black;
+	background-color:white;
 	border-radius:16px;
-	color:white;
+	/*color:white;*/
 	text-align:center;
 }
 .messages li {
@@ -94,7 +94,7 @@ form button {
 	width:56px;
 }
 .chatWindow {
-	border:3px solid #CCC;
+	border:3px solid #e1e1e1;
 	width:400px;
 	height:449px;	/*421px;*/
 	position:absolute;

@@ -62,7 +62,7 @@
 					"id" : socket.id,
 					"username" : data.username,
 					"location" : data.location,
-					"status" : globalFlags.status.AVAILABLE
+					"status" : 1//globalFlags.status.AVAILABLE
 				};
 
 				socket.emit('username', {
@@ -91,6 +91,10 @@
 
 		registerSocketEvent(socket, 'buzz', function(sentData) {			
 			socket.broadcast.to(sentData.id).emit('buzz', sentData);
+		});
+		
+		registerSocketEvent(socket, 'typing', function(sentData) {			
+			socket.broadcast.to(sentData.to).emit('typing', sentData);
 		});
 		
 		registerSocketEvent(socket, 'status change', function(sentData) {

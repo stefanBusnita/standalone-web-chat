@@ -188,14 +188,13 @@ $(document).ready(function() {
 			})()
 		};
 
-		var typing = false;
+		var timeoutCheck;
 
 		this.doTypingMessage = function(id) {
 
-			var socketId,
-			    timeout;
+			var socketId;
+
 			for (var key in connections) {
-				console.log(key, id);
 				if (key === id.split("-")[1]) {
 					socketId = connections[key].id;
 					break;
@@ -205,14 +204,40 @@ $(document).ready(function() {
 			data = {
 				me : socket.id,
 				to : socketId,
-				message : username + " is typeing..."
+				message : username + " is typing..."
 			};
 
-			console.log(data);
-			/*
-			 socket.emit('typeing', data);	*/
-
+			socket.emit('typing', data);
 		};
+
+		socket.on('typing', function(data) {
+
+			var connectionKeyOnClient;
+			for (var key in connections) {
+				if (connections[key].id == "/#" + data.me) {
+					connectionKeyOnClient = key;
+					break;
+				}
+			}			
+						
+			if(!$("#typing-"+connectionKeyOnClient).length && connections[connectionKeyOnClient].opened == true){ 
+				$('#messages-'+connectionKeyOnClient).append($('<li>').attr({"id" : "typing-"+connectionKeyOnClient}).html(data.message));	
+			}else{
+				//move to bottom
+			}
+			
+			
+			//add at bottom of list with typing id
+			// if already there, remove and add at bottom maybe
+
+			clearTimeout(timeoutCheck);
+
+			timeoutCheck = setTimeout(function() {
+				$("#typing-"+connectionKeyOnClient).remove();
+			}, 5000);
+
+			//helperFunctions.updateScroll();
+		});
 
 		function createNewChatWindow(key, connection) {
 
@@ -282,7 +307,6 @@ $(document).ready(function() {
 				id : connections[connectionKeyOnClient].id,
 				me : socket.id
 			};
-			//append to my interface the fact that he was buzzed
 
 			$('#messages-' + connectionKeyOnClient).append($('<li>').html("You buzzed ! (" + (new Date()).toLocaleTimeString() + ")"));
 
@@ -308,6 +332,9 @@ $(document).ready(function() {
 
 			if ( typeof data.message != undefined && data.message != null && data.message != "") {
 
+				if('#typing'+connectionKeyOnClient) //TODO insert before is typing 
+				{}
+				
 				$('#messages-' + connectionKeyOnClient).append($('<li>').html(username + " (" + (new Date()).toLocaleTimeString() + "): " + helperFunctions.findLinks($(elementId).val())));
 
 				if (connectionKeyOnClient === "all") {
@@ -376,6 +403,8 @@ $(document).ready(function() {
 					break;
 				}
 			}
+			
+			$("#typing-"+connectionKeyOnClient).remove();
 
 			if (!connections[connectionKeyOnClient].opened || connections[connectionKeyOnClient].opened == false) {
 				createNewChatWindow(connectionKeyOnClient, connections[connectionKeyOnClient]);
@@ -395,8 +424,8 @@ $(document).ready(function() {
 			helperFunctions.updateScroll();
 		});
 
-		function statusChangeHandler(event) {			
-			data = {//TODO
+		function statusChangeHandler(event) {
+			data = {
 				me : socket.id,
 				status : $(this).val()
 			};
@@ -409,7 +438,7 @@ $(document).ready(function() {
 			for (var key in connections) {
 				if (connections[key].id == "/#" + data.me) {
 					connections[key].status = data.status;
-			// create transpozition for this one with text, and write text as title attr
+					// create transpozition for this one with text, and write text as title attr
 					if (data.status == 1) {
 						$('#' + key.toString()).removeClass('busy');
 						$('#' + key.toString()).removeClass('away');
