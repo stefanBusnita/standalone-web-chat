@@ -186,7 +186,7 @@ transform: translate3d(4px, 0, 0);
 	-o-animation:shake .7s 1;
 	animation:shake .7s 1;
 }
-.notifications-button {
+.settings-button {
 	float:right;
 	height:inherit;
 	padding:0px;

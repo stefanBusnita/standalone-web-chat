@@ -7073,7 +7073,8 @@ $(document).ready(function() {
 
 			addEventListener('#chatWindow-' + key.toString(), 'click', function(event) {
 
-				var maxZIndex = 0,zIndex = $('#chatWindow-' + key.toString()).css("z-index");
+				var maxZIndex = 0,
+				    zIndex = $('#chatWindow-' + key.toString()).css("z-index");
 
 				max = Math.max(maxZIndex, zIndex);
 
@@ -7302,8 +7303,12 @@ $(document).ready(function() {
 				size++;
 				client = data.updatedList[key.toString()];
 
-			
-				var li = $('<li>').addClass('user').attr('id', key.toString()).text(client.username + " " + client.location.city + " - " + client.location.country);
+				var li = $('<li>').addClass('user').attr('id', key.toString()).html(client.username + " " + client.location.city),
+					flag = $('<span>').addClass('flag-icon flag-icon-' + (client.location.country).toLowerCase());
+
+				if (client.location.country) {
+					li.append(flag);
+				}
 
 				$('#users').append(li);
 

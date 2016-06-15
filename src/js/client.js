@@ -193,6 +193,11 @@ $(document).ready(function() {
 
 		var timeoutCheck;
 
+		this.openSettings = function() {
+			//open modal with settings, and show notification settings and other things.
+			//maybe create cookie to remember settings and load settings first thing when on page.
+		};
+
 		this.doTypingMessage = function(id) {
 
 			var socketId;
@@ -228,12 +233,7 @@ $(document).ready(function() {
 					"id" : "typing-" + connectionKeyOnClient
 				}).html(data.message));
 				helperFunctions.updateScroll(connectionKeyOnClient);
-			} else {
-				//move to bottom
 			}
-
-			//add at bottom of list with typing id
-			// if already there, remove and add at bottom maybe
 
 			clearTimeout(timeoutCheck);
 
@@ -285,7 +285,8 @@ $(document).ready(function() {
 
 			addEventListener('#chatWindow-' + key.toString(), 'click', function(event) {
 
-				var maxZIndex = 0,zIndex = $('#chatWindow-' + key.toString()).css("z-index");
+				var maxZIndex = 0,
+				    zIndex = $('#chatWindow-' + key.toString()).css("z-index");
 
 				max = Math.max(maxZIndex, zIndex);
 
@@ -319,8 +320,6 @@ $(document).ready(function() {
 			var elementId = "#" + id.toString(),
 			    connectionKeyOnClient = elementId.split("-")[1];
 
-			//check in connections if i am the certain user, and do stuff i guess ?? //TODO
-
 			data = {
 				message : $(elementId).val(),
 				me : socket.id,
@@ -338,8 +337,7 @@ $(document).ready(function() {
 
 				$('#messages-' + connectionKeyOnClient).append($('<li>').html(username + " (" + (new Date()).toLocaleTimeString() + "): " + helperFunctions.findLinks($(elementId).val())));
 
-				if (clonedTyping)//TODO insert before is typing
-				{
+				if (clonedTyping) {
 					$('#messages-' + connectionKeyOnClient).append(clonedTyping);
 				}
 
@@ -514,8 +512,12 @@ $(document).ready(function() {
 				size++;
 				client = data.updatedList[key.toString()];
 
-			
-				var li = $('<li>').addClass('user').attr('id', key.toString()).text(client.username + " " + client.location.city + " - " + client.location.country);
+				var li = $('<li>').addClass('user').attr('id', key.toString()).html(client.username + " " + client.location.city),
+				    flag = $('<span>').addClass('flag-icon flag-icon-' + (client.location.country).toLowerCase());
+
+				if (client.location.country) {
+					li.append(flag);
+				}
 
 				$('#users').append(li);
 
@@ -549,6 +551,7 @@ $(document).ready(function() {
 		};
 
 		this.removeEventListener = function(element, type) {
+			//TODO check here if ok ! ! !
 			for (var i = 0; i < type.length; i++) {
 				if (handlers[element]) {
 					$(element).off(type[i], handlers[element][type]);

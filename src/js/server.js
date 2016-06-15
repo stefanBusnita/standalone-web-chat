@@ -13,6 +13,7 @@
 	
 	app.use("/scripts", express.static(__dirname));
 	app.use("/styles", express.static(__dirname + '/../css'));
+	app.use("/node", express.static(__dirname + '/../../node_modules/flag-icon-css'));
 	app.use("/images", express.static(__dirname + '/../img'));
 	app.use("/static", express.static(__dirname + '/../sounds'));
 
