@@ -140,9 +140,12 @@ $(document).ready(function() {
 					element.removeClass('shake');
 				});
 			},
-			updateScroll : function() {
-				$('.messagesContainer').animate({
-					scrollTop : $('.messagesContainer').prop("scrollHeight")
+			updateScroll : function(connectionKeyOnClient) {
+
+				var key = connectionKeyOnClient ? connectionKeyOnClient : "all";
+
+				$('#messagesContainer-' + key).animate({
+					scrollTop : $('#messagesContainer-' + key).prop("scrollHeight")
 				}, 500);
 			},
 			makeNewPosition : function(offset) {
@@ -218,25 +221,25 @@ $(document).ready(function() {
 					connectionKeyOnClient = key;
 					break;
 				}
-			}			
-						
-			if(!$("#typing-"+connectionKeyOnClient).length && connections[connectionKeyOnClient].opened == true){ 
-				$('#messages-'+connectionKeyOnClient).append($('<li>').attr({"id" : "typing-"+connectionKeyOnClient}).html(data.message));	
-			}else{
+			}
+
+			if (!$("#typing-" + connectionKeyOnClient).length && connections[connectionKeyOnClient].opened == true) {
+				$('#messages-' + connectionKeyOnClient).append($('<li>').attr({
+					"id" : "typing-" + connectionKeyOnClient
+				}).html(data.message));
+				helperFunctions.updateScroll(connectionKeyOnClient);
+			} else {
 				//move to bottom
 			}
-			
-			
+
 			//add at bottom of list with typing id
 			// if already there, remove and add at bottom maybe
 
 			clearTimeout(timeoutCheck);
 
 			timeoutCheck = setTimeout(function() {
-				$("#typing-"+connectionKeyOnClient).remove();
+				$("#typing-" + connectionKeyOnClient).remove();
 			}, 5000);
-
-			//helperFunctions.updateScroll();
 		});
 
 		function createNewChatWindow(key, connection) {
@@ -258,7 +261,7 @@ $(document).ready(function() {
 				'id' : 'buzz-' + key.toString(),
 				'onclick' : "buzz(this.id)"
 			}),
-			messagesContainer = $("<div class='messagesContainer'>"),
+			messagesContainer = $("<div class='messagesContainer'>").attr('id', "messagesContainer-" + key.toString()),
 			list = $("<ul class='messages'>").attr('id', "messages-" + key.toString() + ""),
 			form = $("<form class='form-inline chat-form' id='formTst' action='' onsubmit='return false;'>"),
 			sendButton = $("<input class='sendButton btn-success btn' type = 'button'   value='Send'>").attr({
@@ -282,8 +285,7 @@ $(document).ready(function() {
 
 			addEventListener('#chatWindow-' + key.toString(), 'click', function(event) {
 
-				var maxZIndex = 0;
-				var zIndex = $('#chatWindow-' + key.toString()).css("z-index");
+				var maxZIndex = 0,zIndex = $('#chatWindow-' + key.toString()).css("z-index");
 
 				max = Math.max(maxZIndex, zIndex);
 
@@ -302,7 +304,6 @@ $(document).ready(function() {
 		this.buzz = function(id) {
 
 			var connectionKeyOnClient = id.split("-")[1];
-			console.log(connectionKeyOnClient, id);
 			data = {
 				id : connections[connectionKeyOnClient].id,
 				me : socket.id
@@ -320,7 +321,6 @@ $(document).ready(function() {
 
 			//check in connections if i am the certain user, and do stuff i guess ?? //TODO
 
-			//console.log(elementId, $(elementId).val(), connectionKeyOnClient, connections[connectionKeyOnClient] ? connections[connectionKeyOnClient].id : "");
 			data = {
 				message : $(elementId).val(),
 				me : socket.id,
@@ -330,12 +330,18 @@ $(document).ready(function() {
 				}
 			};
 
+			var clonedTyping = $("#typing-" + connectionKeyOnClient).clone();
+
 			if ( typeof data.message != undefined && data.message != null && data.message != "") {
 
-				if('#typing'+connectionKeyOnClient) //TODO insert before is typing 
-				{}
-				
+				$("#typing-" + connectionKeyOnClient).remove();
+
 				$('#messages-' + connectionKeyOnClient).append($('<li>').html(username + " (" + (new Date()).toLocaleTimeString() + "): " + helperFunctions.findLinks($(elementId).val())));
+
+				if (clonedTyping)//TODO insert before is typing
+				{
+					$('#messages-' + connectionKeyOnClient).append(clonedTyping);
+				}
 
 				if (connectionKeyOnClient === "all") {
 					socket.emit('chat message', data);
@@ -344,10 +350,20 @@ $(document).ready(function() {
 				}
 
 				$(elementId).val('');
-				helperFunctions.updateScroll();
+				helperFunctions.updateScroll(connectionKeyOnClient);
 
 			} else {
+
+				$("#typing-" + connectionKeyOnClient).remove();
+
 				$('#messages-' + connectionKeyOnClient).append($('<li>').text("You can't send an empty message."));
+
+				if (clonedTyping) {
+					$('#messages-' + connectionKeyOnClient).append(clonedTyping);
+				}
+
+				helperFunctions.updateScroll(connectionKeyOnClient);
+
 			}
 
 		};
@@ -379,7 +395,7 @@ $(document).ready(function() {
 
 			}
 
-			el = $('#messages-' + connectionKeyOnClient);
+			el = $('#writtenText-' + connectionKeyOnClient);
 
 			$('#messages-' + connectionKeyOnClient).append($('<li>').html("Buzzzzzzz ring ding ! (" + (new Date()).toLocaleTimeString() + ")"));
 
@@ -387,7 +403,7 @@ $(document).ready(function() {
 				helperFunctions.shakeAnimation($('#chatWindow-' + connectionKeyOnClient));
 			}
 
-			helperFunctions.updateScroll();
+			helperFunctions.updateScroll(connectionKeyOnClient);
 
 			// maybe do a funny func move
 
@@ -403,8 +419,8 @@ $(document).ready(function() {
 					break;
 				}
 			}
-			
-			$("#typing-"+connectionKeyOnClient).remove();
+
+			$("#typing-" + connectionKeyOnClient).remove();
 
 			if (!connections[connectionKeyOnClient].opened || connections[connectionKeyOnClient].opened == false) {
 				createNewChatWindow(connectionKeyOnClient, connections[connectionKeyOnClient]);
@@ -413,7 +429,7 @@ $(document).ready(function() {
 
 			}
 
-			el = $('#messages-' + connectionKeyOnClient);
+			el = $('#writtenText-' + connectionKeyOnClient);
 
 			$('#messages-' + connectionKeyOnClient).append($('<li>').html(data.me.username + " (" + (new Date()).toLocaleTimeString() + "): " + helperFunctions.findLinks(data.message)));
 
@@ -421,7 +437,7 @@ $(document).ready(function() {
 				helperFunctions.shakeAnimation($('#chatWindow-' + connectionKeyOnClient));
 			}
 
-			helperFunctions.updateScroll();
+			helperFunctions.updateScroll(connectionKeyOnClient);
 		});
 
 		function statusChangeHandler(event) {
@@ -498,7 +514,7 @@ $(document).ready(function() {
 				size++;
 				client = data.updatedList[key.toString()];
 
-				console.log(client, socket.id);
+			
 				var li = $('<li>').addClass('user').attr('id', key.toString()).text(client.username + " " + client.location.city + " - " + client.location.country);
 
 				$('#users').append(li);

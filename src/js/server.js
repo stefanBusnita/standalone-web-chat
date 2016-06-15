@@ -98,8 +98,7 @@
 		});
 		
 		registerSocketEvent(socket, 'status change', function(sentData) {
-			connections[sentData.me].status = sentData.status;		
-			console.log(connections[sentData.me]);
+			connections[sentData.me].status = sentData.status;
 			io.emit('status change', sentData);
 		});
 
@@ -109,7 +108,6 @@
 				me : connections[sentData.me],
 				to : sentData.to
 			};
-			console.log("on server private message was ", data, sentData);
 			socket.broadcast.to(sentData.to.socketId).emit('private message', data);
 		});
 
