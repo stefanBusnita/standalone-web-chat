@@ -193,9 +193,9 @@ transform: translate3d(4px, 0, 0);
 	width:37px;
 	border-radius:16px;
 }
-.chat-status{
+#chat-status{
 	width: 114px;
 }
-.busy{
-	
+.country-flag{
+	padding-left:34px;
 }

@@ -6802,7 +6802,14 @@ $(document).ready(function() {
 		var stream = ss.createStream();
 		var filename = 'background.png';
 		var fs = require('fs');
-
+		var statuses = $("#chat-status>option").map(function() {
+			var val = $(this).val().toString();
+			return {
+				text : $(this).text(),
+				value : $(this).val()
+			};
+		});
+		console.log(statuses);
 		/*
 		 ss(socket).emit('profile-image', stream, {
 		 name : filename
@@ -6976,10 +6983,37 @@ $(document).ready(function() {
 						addEventListener(document, event, handler);
 					return !document[hiddenArgument];
 				};
-			})()
+			})(),
+			getStatusText : function(status) {
+				for (var i = 0; i < statuses.length; i++) {
+					if (statuses[i]["value"] == status) {
+						return statuses[i].text;
+						break;
+					}
+				}
+			},
+			updateStatusIcon : function(key, status) {
+				if (status == 1) {// TODO CREATE TRANSPOZITIONS FOR THESE STATUS-ACTIONS
+					$('#' + key.toString()).removeClass('busy');
+					$('#' + key.toString()).removeClass('away');
+				} else if (status == 2 || status == 3) {
+					$('#' + key.toString()).removeClass('away');
+					$('#' + key.toString()).addClass('busy');
+				} else {
+					$('#' + key.toString()).removeClass('busy');
+					$('#' + key.toString()).addClass('away');
+				}
+				$('#' + key.toString()).removeClass('user');
+				$('#' + key.toString()).addClass('user');
+			}
 		};
 
 		var timeoutCheck;
+
+		this.openSettings = function() {
+			//open modal with settings, and show notification settings and other things.
+			//maybe create cookie to remember settings and load settings first thing when on page.
+		};
 
 		this.doTypingMessage = function(id) {
 
@@ -7016,12 +7050,7 @@ $(document).ready(function() {
 					"id" : "typing-" + connectionKeyOnClient
 				}).html(data.message));
 				helperFunctions.updateScroll(connectionKeyOnClient);
-			} else {
-				//move to bottom
 			}
-
-			//add at bottom of list with typing id
-			// if already there, remove and add at bottom maybe
 
 			clearTimeout(timeoutCheck);
 
@@ -7108,8 +7137,6 @@ $(document).ready(function() {
 			var elementId = "#" + id.toString(),
 			    connectionKeyOnClient = elementId.split("-")[1];
 
-			//check in connections if i am the certain user, and do stuff i guess ?? //TODO
-
 			data = {
 				message : $(elementId).val(),
 				me : socket.id,
@@ -7127,8 +7154,7 @@ $(document).ready(function() {
 
 				$('#messages-' + connectionKeyOnClient).append($('<li>').html(username + " (" + (new Date()).toLocaleTimeString() + "): " + helperFunctions.findLinks($(elementId).val())));
 
-				if (clonedTyping)//TODO insert before is typing
-				{
+				if (clonedTyping) {
 					$('#messages-' + connectionKeyOnClient).append(clonedTyping);
 				}
 
@@ -7243,19 +7269,8 @@ $(document).ready(function() {
 			for (var key in connections) {
 				if (connections[key].id == "/#" + data.me) {
 					connections[key].status = data.status;
-					// create transpozition for this one with text, and write text as title attr
-					if (data.status == 1) {
-						$('#' + key.toString()).removeClass('busy');
-						$('#' + key.toString()).removeClass('away');
-					} else if (data.status == 2 || data.status == 3) {
-						$('#' + key.toString()).removeClass('away');
-						$('#' + key.toString()).addClass('busy');
-					} else {
-						$('#' + key.toString()).removeClass('busy');
-						$('#' + key.toString()).addClass('away');
-					}
-					$('#' + key.toString()).removeClass('user');
-					$('#' + key.toString()).addClass('user');
+					helperFunctions.updateStatusIcon(key, data.status);
+					$('#' + "status-" + key.toString()).text(helperFunctions.getStatusText(data.status));
 					break;
 				}
 			}
@@ -7271,7 +7286,7 @@ $(document).ready(function() {
 
 			username = data.username;
 			$("option[value='1']").attr('selected', 'selected');
-			addEventListener('.chat-status', 'change', statusChangeHandler);
+			addEventListener('#chat-status', 'change', statusChangeHandler);
 		});
 
 		socket.on('update', function(data) {
@@ -7304,13 +7319,19 @@ $(document).ready(function() {
 				client = data.updatedList[key.toString()];
 
 				var li = $('<li>').addClass('user').attr('id', key.toString()).html(client.username + " " + client.location.city),
-					flag = $('<span>').addClass('flag-icon flag-icon-' + (client.location.country).toLowerCase());
+				    flag = $('<span>').addClass('country-flag flag-icon flag-icon-' + (client.location.country).toLowerCase()),
+				    status = $('<span>').attr({
+					"id" : "status-" + key.toString()
+				}).append(" " + helperFunctions.getStatusText(client.status));
 
 				if (client.location.country) {
 					li.append(flag);
 				}
+				li.append(status);
 
 				$('#users').append(li);
+
+				helperFunctions.updateStatusIcon(key, client.status);
 
 				if (client.id != '/#' + socket.id) {
 
@@ -7342,6 +7363,7 @@ $(document).ready(function() {
 		};
 
 		this.removeEventListener = function(element, type) {
+			//TODO check here if ok ! ! !
 			for (var i = 0; i < type.length; i++) {
 				if (handlers[element]) {
 					$(element).off(type[i], handlers[element][type]);

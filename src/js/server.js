@@ -63,7 +63,7 @@
 					"id" : socket.id,
 					"username" : data.username,
 					"location" : data.location,
-					"status" : 1//globalFlags.status.AVAILABLE
+					"status" : 	1//globalFlags.status.AVAILABLE
 				};
 
 				socket.emit('username', {
