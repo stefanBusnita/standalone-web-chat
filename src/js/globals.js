@@ -5,8 +5,11 @@ var globalFlags = {
 	},
 	status : {
 		AVAILABLE : 1
-	}
-
+	},
+	windowTypes : {
+		CHAT : 1,
+		ROOM : 2
+	}	
 };
 
 module.exports = globalFlags; 

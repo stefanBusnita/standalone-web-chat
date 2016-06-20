@@ -6,9 +6,17 @@ $(document).ready(function() {
 		    data = {},
 		    username,
 		    connections = [],
+		    rooms = {},
+		    joinedRooms = {},
 		    notifications = [],
 		    notificationProperties = {
 			timeout : 2000
+		},
+		    global = {
+			windowTypes : {
+				CHAT : 1,
+				ROOM : 2
+			}
 		};
 
 		var stream = ss.createStream();
@@ -21,7 +29,6 @@ $(document).ready(function() {
 				value : $(this).val()
 			};
 		});
-		console.log(statuses);
 		/*
 		 ss(socket).emit('profile-image', stream, {
 		 name : filename
@@ -93,6 +100,22 @@ $(document).ready(function() {
 			$.get("http://ipinfo.io", doLocationCallback, "jsonp").fail(doLocationCallback);
 		});
 
+		$('#roomModal').on('hidden.bs.modal', function() {
+			data = {
+				room : $('#roomName').val(),
+				password : $('#roomPassword').val()
+			};
+
+			socket.emit('room created', data);
+			$('#roomName').val('');
+			$('#roomPassword').val('');
+			data.admin = true;
+			joinedRooms[data.room] = data;
+			//create chat room window
+			//room created
+			//update chat rooms list
+		});
+
 		function doLocationCallback(response) {
 			data = {
 				username : $('#username').val(),
@@ -162,14 +185,24 @@ $(document).ready(function() {
 				    randomWidth = Math.floor(Math.random() * pageWidth);
 				return [randomHeight, randomWidth];
 			},
-			removeWindow : function(key) {
+			removeWindow : function(key, type) {
 
-				if (connections[key]) {
-					connections[key].opened = false;
+				if (type === global.windowTypes.CHAT) {
+					if (connections[key]) {
+						connections[key].opened = false;
+					}
+					removeEventListener(key.toString(), ["click", "keyup"]);
+
+					$('#chatWindow-' + key.toString()).remove();
+				} else if (type === global.windowTypes.ROOM) {
+
+					if (rooms[key]) {
+						rooms[key].opened = false;
+					}
+					//TODO remove event listeners also
+					$('#roomWindow-' + key.toString()).remove();
 				}
-				removeEventListener(key.toString(), ["click", "keyup"]);
 
-				$('#chatWindow-' + key.toString()).remove();
 			},
 			windowOnFocus : (function() {
 				var event,
@@ -227,6 +260,46 @@ $(document).ready(function() {
 			//maybe create cookie to remember settings and load settings first thing when on page.
 		};
 
+		this.addRoom = function() {
+			$("#roomModal").modal();
+			//open modal with room creation
+			//maybe add password ??
+		};
+
+		this.joinRoom = function(id) {
+			var roomId = id.split("-")[1];
+			if (!joinedRooms[roomId]) {
+				joinedRooms[roomId] = rooms[roomId];
+				//TODO emit join event on room, after this one open a window
+			} else {
+				if (rooms[roomId].opened) {
+					helperFunctions.shakeAnimation($("#roomWindow-" + roomId));
+					$("#roomWrittenText-" + roomId).focus();
+				} else {
+					createNewChatWindow(roomId, rooms, global.windowTypes.ROOM);
+					addEventListener('#roomWrittenText-' + roomId, 'keyup', keyUpHandlerRooms);
+				}
+			}
+		};
+
+		this.leaveRoom = function(id) {
+			var roomId = id.split("-")[1];
+			delete joinedRooms[roomId];
+			//if admin reset list for all by deleting from rooms.
+			//if not just leave room thu event in server, then update my joined rooms list
+		};
+
+		this.sendRoomData = function(id) {
+			var roomId = id.split("-")[1];
+			console.log(roomId);
+			data = {
+				me : socket.id,
+				roomName : roomId,
+				message : "Hi to the room"
+			};
+			socket.emit('room message', data);
+		};
+
 		this.doTypingMessage = function(id) {
 
 			var socketId;
@@ -246,6 +319,37 @@ $(document).ready(function() {
 
 			socket.emit('typing', data);
 		};
+
+		socket.on('room message', function(data) {
+			var connectionKeyOnClient;
+			for (var key in connections) {
+				if (connections[key].id == "/#" + data.me) {
+					connectionKeyOnClient = key;
+					break;
+				}
+			}
+
+			if (!rooms[data.roomName].opened || rooms[data.roomName].opened == false) {
+				createNewChatWindow(data.roomName, rooms, global.windowTypes.ROOM);
+				addEventListener('#roomWrittenText-' + data.roomName, 'keyup', keyUpHandlerRooms);
+			}
+
+			el = $('#roomWrittenText-' + data.roomName);
+
+			$('#messages-' + data.roomName).append($('<li>').html(connections[connectionKeyOnClient].username + " (" + (new Date()).toLocaleTimeString() + "): " + helperFunctions.findLinks(data.message)));
+
+			if (!el.is(":focus")) {
+				helperFunctions.shakeAnimation($('#roomWindow-' + data.roomName));
+			}
+
+			helperFunctions.updateScroll(data.roomName);
+
+			//check if room is opened
+			//if not open it
+			//if it is opened,just post the message in there
+
+			console.log("message for room " + data.roomName + " :" + data.message + " from " + connections[connectionKeyOnClient].username);
+		});
 
 		socket.on('typing', function(data) {
 
@@ -271,20 +375,34 @@ $(document).ready(function() {
 			}, 5000);
 		});
 
-		function createNewChatWindow(key, connection) {
+		function createNewChatWindow(key, connection, type) {
 
-			connections[key].opened = true;
+			console.log(connection, key);
+
+			if (type === global.windowTypes.CHAT) {
+				connections[key].opened = true;
+				var classType = "chatWindow",
+				    classString = "chat",
+				    writtenText = "writtenText",
+				    pageHeaderText = connection.username;
+			} else {
+				connection[key].opened = true;
+				var classType = "roomWindow",
+				    classString = "room",
+				    writtenText = "roomWrittenText",
+				    pageHeaderText = "Room " + connection[key].room;
+			}
 
 			var pos = helperFunctions.makeNewPosition(150),
-			    chatWindow = $("<div class='chatWindow'>").css({
+			    chatWindow = $("<div class=" + classType + ">").css({
 				top : pos[0],
 				left : pos[1]
-			}).attr("id", "chatWindow-" + key.toString()),
+			}).attr("id", classType + "-" + key.toString()),
 			    closeButton = $("<input class='btn-danger btn chat-window-close'  type = 'button' value='X'/>").attr({
 				'id' : 'close-' + key.toString(),
-				'onclick' : "removeChatWindow(this.id)"
+				'onclick' : "removeChatWindow(this.id," + type + ")"
 			});
-			pageHeader = $("<div class='pageHeader' id='main-lobby-header'>").text(connection.username),
+			pageHeader = $("<div class='pageHeader' id='main-lobby-header'>").text(pageHeaderText),
 			optionsContainer = $("<div class='chat-options-container'></div>"),
 			buzzButton = $("<button class='btn btn-default chat-buzz'><span class='glyphicon glyphicon-bell'></span></button>").attr({
 				'id' : 'buzz-' + key.toString(),
@@ -292,43 +410,47 @@ $(document).ready(function() {
 			}),
 			messagesContainer = $("<div class='messagesContainer'>").attr('id', "messagesContainer-" + key.toString()),
 			list = $("<ul class='messages'>").attr('id', "messages-" + key.toString() + ""),
-			form = $("<form class='form-inline chat-form' id='formTst' action='' onsubmit='return false;'>"),
+			form = $("<form class='form-inline " + classString + "-form' id='formTst' action='' onsubmit='return false;'>"),
 			sendButton = $("<input class='sendButton btn-success btn' type = 'button'   value='Send'>").attr({
 				'id' : key.toString(),
-				'onclick' : "sendData('writtenText-'+this.id)"
+				'onclick' : type === global.windowTypes.CHAT ? "sendData('writtenText-'+this.id)" : "sendRoomData('roomWrittenText-'+this.id)"
 			}),
-			textToSend = $("<input  class='form-control chat-form-text' placeholder='Write your message here...'  autocomplete='off' >").attr('id', "writtenText-" + key.toString());
+			textToSend = $("<input  class='form-control " + classString + "-form-text' placeholder='Write your message here...'  autocomplete='off' >").attr('id', writtenText + "-" + key.toString());
 
 			messagesContainer.append(list);
 			form.append(sendButton, textToSend);
 			pageHeader.append(closeButton);
-			optionsContainer.append(buzzButton);
+
+			if (type === global.windowTypes.CHAT) {
+				optionsContainer.append(buzzButton);
+			}
+
 			chatWindow.append(pageHeader, messagesContainer, optionsContainer, form);
 
 			$(document.body).append(chatWindow);
 
-			$('.chatWindow').draggable({
+			$('.' + classType).draggable({
 				containment : 'parent',
 				handle : ".lobby-header"
 			});
 
-			addEventListener('#chatWindow-' + key.toString(), 'click', function(event) {
+			addEventListener('#' + classType + "-" + key.toString(), 'click', function(event) {
 
 				var maxZIndex = 0,
-				    zIndex = $('#chatWindow-' + key.toString()).css("z-index");
+				    zIndex = $('#' + classType + "-" + key.toString()).css("z-index");
 
 				max = Math.max(maxZIndex, zIndex);
 
-				$('#chatWindow-' + key.toString()).css("z-index", max + 1);
+				$('#' + classType + "-" + key.toString()).css("z-index", max + 1);
 
-				$(".chatWindow:not(" + '#chatWindow-' + key.toString() + ")").css("z-index", max - 1);
-				;
+				$("." + classType + ":not(#" + classType + "-" + key.toString() + ")").css("z-index", max - 1);
 
 			});
 		};
 
-		this.removeChatWindow = function(id) {
-			helperFunctions.removeWindow(id.split("-")[1]);
+		this.removeChatWindow = function(id, type) {
+
+			helperFunctions.removeWindow(id.split("-")[1], type === global.windowTypes.CHAT ? global.windowTypes.CHAT : global.windowTypes.ROOM);
 		};
 
 		this.buzz = function(id) {
@@ -416,7 +538,7 @@ $(document).ready(function() {
 			}
 
 			if (!connections[connectionKeyOnClient].opened || connections[connectionKeyOnClient].opened == false) {
-				createNewChatWindow(connectionKeyOnClient, connections[connectionKeyOnClient]);
+				createNewChatWindow(connectionKeyOnClient, connections[connectionKeyOnClient], global.windowTypes.CHAT);
 
 				addEventListener('#writtenText-' + connectionKeyOnClient, 'keyup', keyUpHandler);
 
@@ -450,7 +572,7 @@ $(document).ready(function() {
 			$("#typing-" + connectionKeyOnClient).remove();
 
 			if (!connections[connectionKeyOnClient].opened || connections[connectionKeyOnClient].opened == false) {
-				createNewChatWindow(connectionKeyOnClient, connections[connectionKeyOnClient]);
+				createNewChatWindow(connectionKeyOnClient, connections[connectionKeyOnClient], global.windowTypes.CHAT);
 
 				addEventListener('#writtenText-' + connectionKeyOnClient, 'keyup', keyUpHandler);
 
@@ -501,7 +623,90 @@ $(document).ready(function() {
 			addEventListener('#chat-status', 'change', statusChangeHandler);
 		});
 
-		socket.on('update', function(data) {
+		var buttonsTimeout = {};
+
+		socket.on('update rooms', function(data) {
+
+			rooms = data;
+			var roomType;
+			$('#rooms').empty();
+
+			for (var key in rooms) {
+
+				roomType = rooms[key].private ? "private" : "public";
+
+				var li = $('<li>').addClass("room").attr('id', key.toString()).html(rooms[key].room);
+
+				$('#rooms').append(li);
+
+				$("#" + key.toString()).addClass(roomType);
+
+				//add event listeners
+
+				addEventListener('#' + key.toString(), 'click', function(event) {
+
+					clearTimeout(buttonsTimeout[event.target.id]);
+					delete buttonsTimeout[event.target.id];
+					//add the two buttons for JOIN OR LEAVE.
+					//if joined on click open window + make the 2 buttons visible.
+
+					var join = $("<input class='btn-success btn room-button'  type = 'button' value='Join'/>").attr({
+						"id" : 'join-' + event.target.id,
+						"onclick" : "joinRoom(this.id)"
+					}),
+					    leave = $("<input class='btn-warning btn room-button'  type = 'button' value='Leave'/>").attr({
+						"id" : 'leave-' + event.target.id,
+						"onclick" : "leaveRoom(this.id)"
+					});
+
+					//joinedRooms[event.target.id] = true;
+					//TODO remove just for testing
+
+					console.log(event.target.id, " in room ", joinedRooms[event.target.id]);
+					if (joinedRooms[event.target.id]) {
+
+						$("#leave-" + event.target.id).length > 0 ? "" : leave.appendTo($("#" + event.target.id)).animate({
+    opacity:  '0.4'  // for instance
+}, 2000);
+
+					} else {
+
+						$("#leave-" + event.target.id).length > 0 && $("#join-" + event.target.id).length > 0 ? "" : $("#" + event.target.id).append(join, leave);
+
+					}
+
+					buttonsTimeout[event.target.id] = setTimeout(function() {
+						$("#leave-" + event.target.id).remove();
+						$("#join-" + event.target.id).remove();
+					}, 3000);
+
+					event.stopPropagation();
+				}, false);
+
+				addEventListener('#' + key.toString(), 'dblclick', function(event) {
+
+					if (joinedRooms[event.target.id]) {
+
+						!rooms[(event.target.id).toString()].opened ? createNewChatWindow(event.target.id, rooms, global.windowTypes.ROOM) : (function() {
+							var element = $("#roomWrittenText-" + (event.target.id).toString());
+							helperFunctions.shakeAnimation(element);
+							element.focus();
+
+						})();
+						addEventListener('#roomWrittenText-' + event.target.id, 'keyup', keyUpHandlerRooms);
+
+					} else {
+						$("#" + event.target.id).click();
+					}
+
+					event.stopPropagation();
+				}, false);
+
+			}
+
+		});
+
+		socket.on('update users', function(data) {
 
 			var connectionKeyOnClient;
 			for (var key in connections) {//change to helper function
@@ -548,7 +753,7 @@ $(document).ready(function() {
 				if (client.id != '/#' + socket.id) {
 
 					addEventListener('#' + key.toString(), 'click', function(event) {
-						!connections[(event.target.id).toString()].opened ? createNewChatWindow(event.target.id, connections[(event.target.id).toString()]) : (function() {
+						!connections[(event.target.id).toString()].opened ? createNewChatWindow(event.target.id, connections[(event.target.id).toString()], global.windowTypes.CHAT) : (function() {
 							var element = $("#writtenText-" + (event.target.id).toString());
 							helperFunctions.shakeAnimation(element);
 							element.focus();
@@ -593,6 +798,18 @@ $(document).ready(function() {
 			sendData(event.target.id);
 		} else {
 			doTypingMessage(event.target.id);
+		}
+		event.preventDefault();
+		event.stopPropagation();
+		return false;
+	}
+
+	function keyUpHandlerRooms(event) {//just for testing purposes
+		var keycode = (event.keyCode ? event.keyCode : event.which);
+		if (keycode == '13') {
+			sendRoomData(event.target.id);
+		} else {
+
 		}
 		event.preventDefault();
 		event.stopPropagation();

@@ -5,12 +5,13 @@
 	    io = require('socket.io')(http),
 	    ss = require('socket.io-stream'),
 	    connections = [],
+	    rooms = {},
 	    express = require("express"),
 	    data = {},
 	    noUsers = 0;
 	var path = require('path');
 	var fs = require('fs');
-	
+
 	app.use("/scripts", express.static(__dirname));
 	app.use("/styles", express.static(__dirname + '/../css'));
 	app.use("/node", express.static(__dirname + '/../../node_modules/flag-icon-css'));
@@ -19,21 +20,31 @@
 
 	io.on('connection', function(socket) {
 
+		socket.join('tst');
+
 		ss(socket).on('file', function(stream, data) {
 			//var filename = path.basename(data.name);
 			console.log(data.size);
 			var size = 0;
-						
-			//stream.pipe(fs.createWriteStream(data));		
+
+			//stream.pipe(fs.createWriteStream(data));
 			/*
-			ss(socket).emit('file', stream, {
-							size : file.size
-						});
-						ss.createBlobReadStream(file).pipe(stream);			*/
-			
+			 ss(socket).emit('file', stream, {
+			 size : file.size
+			 });
+			 ss.createBlobReadStream(file).pipe(stream);			*/
+
 		});
 
-		
+		registerSocketEvent(socket, 'room created', function(data) {
+			rooms[data.room] = data;
+			io.emit('update rooms', rooms);
+		});
+
+		registerSocketEvent(socket, 'room message', function(data) {
+
+			io.to(data.roomName).emit('room message', data);
+		});
 
 		registerSocketEvent(socket, 'disconnect', function() {
 			delete connections[socket.conn.id];
@@ -41,19 +52,23 @@
 				updatedList : toObject(connections),
 				disconnected : socket.conn.id
 			};
-			io.emit('update', data);
+			io.emit('update users', data);
 		});
 
 		registerSocketEvent(socket, 'username', function(data) {
-			
+
 			if (!data.username) {
 				data.username += "potato" + Math.floor(Math.random() * 1000) + 1;
+			}
+
+			if (Object.keys(rooms).length != 0) {
+				io.emit('update rooms', rooms);
 			}
 
 			if (checkForExistingUser(data.username)) {
 				data = {
 					username : "",
-					errorCode : globalFlags.errors.USER_EXISTS
+					errorCode : 1 //globalFlags.errors.USER_EXISTS
 				};
 				socket.emit('username', data);
 				return;
@@ -63,7 +78,7 @@
 					"id" : socket.id,
 					"username" : data.username,
 					"location" : data.location,
-					"status" : 	1//globalFlags.status.AVAILABLE
+					"status" : 1//globalFlags.status.AVAILABLE
 				};
 
 				socket.emit('username', {
@@ -75,7 +90,7 @@
 					disconnected : socket.conn.id
 				};
 
-				io.emit('update', data);
+				io.emit('update users', data);
 			}
 
 		});
@@ -90,14 +105,14 @@
 
 		});
 
-		registerSocketEvent(socket, 'buzz', function(sentData) {			
+		registerSocketEvent(socket, 'buzz', function(sentData) {
 			socket.broadcast.to(sentData.id).emit('buzz', sentData);
 		});
-		
-		registerSocketEvent(socket, 'typing', function(sentData) {			
+
+		registerSocketEvent(socket, 'typing', function(sentData) {
 			socket.broadcast.to(sentData.to).emit('typing', sentData);
 		});
-		
+
 		registerSocketEvent(socket, 'status change', function(sentData) {
 			connections[sentData.me].status = sentData.status;
 			io.emit('status change', sentData);

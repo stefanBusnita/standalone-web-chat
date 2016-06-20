@@ -199,3 +199,66 @@ transform: translate3d(4px, 0, 0);
 .country-flag{
 	padding-left:34px;
 }
+.chatRooms{
+	border:4px solid #CCC;
+	margin:-5px 0 0 0px;
+	border-radius:5px;
+	float:left;
+	height:200px;
+	width:400px;
+	overflow-y:scroll;
+	background-color:white;	
+}
+.add-room-button{
+	float:right;
+	height:inherit;
+	padding:0px;
+	width:37px;
+	border-radius:16px;
+}
+#rooms> li:hover {
+	background:#eee;
+	cursor:pointer;
+}
+#rooms> li {
+	margin-bottom:3px;
+	margin-left:19px;
+}
+#rooms> li[class^="private"]:before {
+	content:"🔐";
+	display:block;
+	float:left;
+	width:1.2em;
+	color:black;
+	vertical-align:middle;
+}
+#rooms> li[class^="public"]:before {
+	content:"🔓";
+	display:block;
+	float:left;
+	width:1.2em;
+	color:black;
+	vertical-align:middle;
+}
+.roomWindow {
+	border:3px solid #e1e1e1;
+	width:400px;
+	height:421px;	/*421px;*/
+	position:absolute;
+	left:50%;
+	top:50%;
+	margin:-25px 0 0 -50px;
+	border-radius:5px;
+	z-index:1;
+}
+.room-form {
+	width:394px;
+	height:41px;
+	position:absolute
+}
+.room-form-text {
+	width:329px !important;
+}
+.room-button{
+	
+}
