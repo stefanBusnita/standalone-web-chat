@@ -270,7 +270,8 @@ $(document).ready(function() {
 			var roomId = id.split("-")[1];
 			if (!joinedRooms[roomId]) {
 				joinedRooms[roomId] = rooms[roomId];
-				//TODO emit join event on room, after this one open a window
+				socket.emit('join room', roomId);
+				//after this one open a window
 			} else {
 				if (rooms[roomId].opened) {
 					helperFunctions.shakeAnimation($("#roomWindow-" + roomId));
@@ -285,6 +286,7 @@ $(document).ready(function() {
 		this.leaveRoom = function(id) {
 			var roomId = id.split("-")[1];
 			delete joinedRooms[roomId];
+			socket.emit('leave room', roomId);
 			//if admin reset list for all by deleting from rooms.
 			//if not just leave room thu event in server, then update my joined rooms list
 		};
@@ -295,9 +297,11 @@ $(document).ready(function() {
 			data = {
 				me : socket.id,
 				roomName : roomId,
-				message : "Hi to the room"
+				message : $("#"+id).val()
 			};
+			//for me just append maybe ??
 			socket.emit('room message', data);
+			$("#"+id).val('');
 		};
 
 		this.doTypingMessage = function(id) {

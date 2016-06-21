@@ -19,9 +19,7 @@
 	app.use("/static", express.static(__dirname + '/../sounds'));
 
 	io.on('connection', function(socket) {
-
-		socket.join('tst');
-
+		
 		ss(socket).on('file', function(stream, data) {
 			//var filename = path.basename(data.name);
 			console.log(data.size);
@@ -35,9 +33,21 @@
 			 ss.createBlobReadStream(file).pipe(stream);			*/
 
 		});
+		
+		
+
+		registerSocketEvent(socket, 'join room', function(data) {
+			socket.join(data);
+		});
+		
+		registerSocketEvent(socket, 'leave room', function(data) {
+			socket.leave(data);
+			//check if admin remove room from rooms list also 
+		});
 
 		registerSocketEvent(socket, 'room created', function(data) {
 			rooms[data.room] = data;
+			socket.join(data.room);
 			io.emit('update rooms', rooms);
 		});
 

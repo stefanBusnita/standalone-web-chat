@@ -2270,10 +2270,30 @@ module.exports = function (obj) {
 
 var process = module.exports = {};
 
-// cached from whatever global is present so that test runners that stub it don't break things.
-var cachedSetTimeout = setTimeout;
-var cachedClearTimeout = clearTimeout;
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
 
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+(function () {
+  try {
+    cachedSetTimeout = setTimeout;
+  } catch (e) {
+    cachedSetTimeout = function () {
+      throw new Error('setTimeout is not defined');
+    }
+  }
+  try {
+    cachedClearTimeout = clearTimeout;
+  } catch (e) {
+    cachedClearTimeout = function () {
+      throw new Error('clearTimeout is not defined');
+    }
+  }
+} ())
 var queue = [];
 var draining = false;
 var currentQueue;
@@ -7038,7 +7058,8 @@ $(document).ready(function() {
 			var roomId = id.split("-")[1];
 			if (!joinedRooms[roomId]) {
 				joinedRooms[roomId] = rooms[roomId];
-				//TODO emit join event on room, after this one open a window
+				socket.emit('join room', roomId);
+				//after this one open a window
 			} else {
 				if (rooms[roomId].opened) {
 					helperFunctions.shakeAnimation($("#roomWindow-" + roomId));
@@ -7053,6 +7074,7 @@ $(document).ready(function() {
 		this.leaveRoom = function(id) {
 			var roomId = id.split("-")[1];
 			delete joinedRooms[roomId];
+			socket.emit('leave room', roomId);
 			//if admin reset list for all by deleting from rooms.
 			//if not just leave room thu event in server, then update my joined rooms list
 		};
@@ -7063,9 +7085,11 @@ $(document).ready(function() {
 			data = {
 				me : socket.id,
 				roomName : roomId,
-				message : "Hi to the room"
+				message : $("#"+id).val()
 			};
+			//for me just append maybe ??
 			socket.emit('room message', data);
+			$("#"+id).val('');
 		};
 
 		this.doTypingMessage = function(id) {
