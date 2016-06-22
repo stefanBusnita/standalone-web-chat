@@ -106,7 +106,12 @@ $(document).ready(function() {
 				password : $('#roomPassword').val(),
 				private : $('#roomPassword').val() ? true : false
 			};
-
+			
+			if(rooms[$('#roomName').val()]){
+				alert("Room name already taken");
+				return;
+			}
+			
 			socket.emit('room created', data);
 			$('#roomName').val('');
 			$('#roomPassword').val('');
@@ -647,7 +652,7 @@ $(document).ready(function() {
 
 				roomType = rooms[key].private ? "private" : "public";
 
-				var li = $('<li>').addClass("room").attr('id', key.toString()).html(rooms[key].room);
+				var li = $('<li>').addClass("room").attr('id', key.toString()).html(rooms[key].room+" Members:"+rooms[key].noUsers);
 
 				$('#rooms').append(li);
 
@@ -665,11 +670,11 @@ $(document).ready(function() {
 					//add the two buttons for JOIN OR LEAVE.
 					//if joined on click open window + make the 2 buttons visible.
 
-					var join = $("<input class='btn-success btn room-button'  type = 'button' value='Join'/>").attr({
+					var join = $("<input class='btn-success btn room-button pull-right'  type = 'button' value='Join'/>").attr({
 						"id" : 'join-' + event.target.id,
 						"onclick" : "joinRoom(this.id)"
 					}),
-					    leave = $("<input class='btn-warning btn room-button'  type = 'button' value='Leave'/>").attr({
+					    leave = $("<input class='btn-warning btn room-button pull-right'  type = 'button' value='Leave'/>").attr({
 						"id" : 'leave-' + event.target.id,
 						"onclick" : "leaveRoom(this.id)"
 					});
@@ -681,17 +686,17 @@ $(document).ready(function() {
 					if (joinedRooms[event.target.id]) {
 
 						$("#leave-" + event.target.id).length > 0 ? "" : leave.appendTo($("#" + event.target.id)).animate({
-							opacity : '0.4' // for instance
+							opacity : '0.2' // for instance
 						}, 5000);
 
 					} else {
 
 						$("#leave-" + event.target.id).length > 0 && $("#join-" + event.target.id).length > 0 ? "" : (function() {
 							leave.appendTo($("#" + event.target.id)).animate({
-								opacity : '0.4' // for instance
+								opacity : '0.2' // for instance
 							}, 5000);
 							join.appendTo($("#" + event.target.id)).animate({
-								opacity : '0.4' // for instance
+								opacity : '0.2' // for instance
 							}, 5000);
 						})();
 

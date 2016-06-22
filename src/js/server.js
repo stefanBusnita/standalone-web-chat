@@ -38,15 +38,20 @@
 
 		registerSocketEvent(socket, 'join room', function(data) {
 			socket.join(data);
+			rooms[data].noUsers++;
+			io.emit('update rooms', rooms);
 		});
 		
 		registerSocketEvent(socket, 'leave room', function(data) {
 			socket.leave(data);
+			rooms[data].noUsers--;
+			io.emit('update rooms', rooms);
 			//check if admin remove room from rooms list also 
 		});
 
 		registerSocketEvent(socket, 'room created', function(data) {
 			rooms[data.room] = data;
+			rooms[data.room].noUsers = 1;
 			socket.join(data.room);
 			io.emit('update rooms', rooms);
 		});
@@ -62,6 +67,7 @@
 				updatedList : toObject(connections),
 				disconnected : socket.conn.id
 			};
+			//get thru all rooms and choose leave,not sure how to do it yet ??
 			io.emit('update users', data);
 		});
 
