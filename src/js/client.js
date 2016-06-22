@@ -93,7 +93,7 @@ $(document).ready(function() {
 			containment : 'parent',
 			handle : ".lobby-header"
 		});
-		$('.chatWindow').resizable();
+		//$('.chatWindow').resizable({ alsoResize: '#messagesContainer-all,.chat-form' });
 
 		$('#myModal').on('hidden.bs.modal', function() {
 			checkNotificationPermission();
@@ -103,7 +103,8 @@ $(document).ready(function() {
 		$('#roomModal').on('hidden.bs.modal', function() {
 			data = {
 				room : $('#roomName').val(),
-				password : $('#roomPassword').val()
+				password : $('#roomPassword').val(),
+				private : $('#roomPassword').val() ? true : false
 			};
 
 			socket.emit('room created', data);
@@ -250,6 +251,11 @@ $(document).ready(function() {
 				}
 				$('#' + key.toString()).removeClass('user');
 				$('#' + key.toString()).addClass('user');
+			},
+			hideButtons : function(roomId) {
+				clearTimeout(buttonsTimeout[roomId]);
+				$("#leave-" + roomId).remove();
+				$("#join-" + roomId).remove();
 			}
 		};
 
@@ -268,6 +274,7 @@ $(document).ready(function() {
 
 		this.joinRoom = function(id) {
 			var roomId = id.split("-")[1];
+			helperFunctions.hideButtons(roomId);
 			if (!joinedRooms[roomId]) {
 				joinedRooms[roomId] = rooms[roomId];
 				socket.emit('join room', roomId);
@@ -285,6 +292,7 @@ $(document).ready(function() {
 
 		this.leaveRoom = function(id) {
 			var roomId = id.split("-")[1];
+			helperFunctions.hideButtons(roomId);
 			delete joinedRooms[roomId];
 			socket.emit('leave room', roomId);
 			//if admin reset list for all by deleting from rooms.
@@ -297,11 +305,11 @@ $(document).ready(function() {
 			data = {
 				me : socket.id,
 				roomName : roomId,
-				message : $("#"+id).val()
+				message : $("#" + id).val()
 			};
 			//for me just append maybe ??
 			socket.emit('room message', data);
-			$("#"+id).val('');
+			$("#" + id).val('');
 		};
 
 		this.doTypingMessage = function(id) {
@@ -645,6 +653,9 @@ $(document).ready(function() {
 
 				$("#" + key.toString()).addClass(roomType);
 
+				$("#" + key.toString()).removeClass('room');
+				$("#" + key.toString()).addClass('room');
+
 				//add event listeners
 
 				addEventListener('#' + key.toString(), 'click', function(event) {
@@ -670,19 +681,26 @@ $(document).ready(function() {
 					if (joinedRooms[event.target.id]) {
 
 						$("#leave-" + event.target.id).length > 0 ? "" : leave.appendTo($("#" + event.target.id)).animate({
-    opacity:  '0.4'  // for instance
-}, 2000);
+							opacity : '0.4' // for instance
+						}, 5000);
 
 					} else {
 
-						$("#leave-" + event.target.id).length > 0 && $("#join-" + event.target.id).length > 0 ? "" : $("#" + event.target.id).append(join, leave);
+						$("#leave-" + event.target.id).length > 0 && $("#join-" + event.target.id).length > 0 ? "" : (function() {
+							leave.appendTo($("#" + event.target.id)).animate({
+								opacity : '0.4' // for instance
+							}, 5000);
+							join.appendTo($("#" + event.target.id)).animate({
+								opacity : '0.4' // for instance
+							}, 5000);
+						})();
 
 					}
 
 					buttonsTimeout[event.target.id] = setTimeout(function() {
 						$("#leave-" + event.target.id).remove();
 						$("#join-" + event.target.id).remove();
-					}, 3000);
+					}, 5000);
 
 					event.stopPropagation();
 				}, false);

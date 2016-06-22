@@ -103,6 +103,7 @@ form button {
 	margin:-25px 0 0 -50px;
 	border-radius:5px;
 	z-index:1;
+	resize: both;
 }
 .chatWindow:not(#chatWindow-all){
 height : 444px;
@@ -216,13 +217,16 @@ transform: translate3d(4px, 0, 0);
 	width:37px;
 	border-radius:16px;
 }
+#rooms{
+	list-style:none;
+}
 #rooms> li:hover {
 	background:#eee;
 	cursor:pointer;
 }
 #rooms> li {
 	margin-bottom:3px;
-	margin-left:19px;
+	margin-left: 5px;
 }
 #rooms> li[class^="private"]:before {
 	content:"🔐";
