@@ -273,3 +273,14 @@ transform: translate3d(4px, 0, 0);
 	padding: 0px;
 	height: inherit;
 }
+.room-users-container{
+	background-color: white;
+	float: right;
+	overflow-y: scroll;
+	height: 391px;
+	width: 160px;
+	margin: -350px 0 0 0;  /*find another solution, this quick solution is just for testing purposes*/
+}
+.room-users-list{
+	list-style: none;
+}

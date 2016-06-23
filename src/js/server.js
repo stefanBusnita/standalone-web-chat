@@ -19,7 +19,7 @@
 	app.use("/static", express.static(__dirname + '/../sounds'));
 
 	io.on('connection', function(socket) {
-		
+
 		ss(socket).on('file', function(stream, data) {
 			//var filename = path.basename(data.name);
 			console.log(data.size);
@@ -33,25 +33,29 @@
 			 ss.createBlobReadStream(file).pipe(stream);			*/
 
 		});
-		
-		
 
 		registerSocketEvent(socket, 'join room', function(data) {
 			socket.join(data);
-			rooms[data].noUsers++;
+			rooms[data].users.push(socket.conn.id);
 			io.emit('update rooms', rooms);
+			io.emit('update room users', data);
 		});
-		
+
 		registerSocketEvent(socket, 'leave room', function(data) {
 			socket.leave(data);
-			rooms[data].noUsers--;
+			for (var i = 0; i < rooms[data].users.length; i++) {
+				if (rooms[data].users[i] == socket.conn.id) {
+					rooms[data].users.splice(1, i);
+					break;
+				}
+			}
 			io.emit('update rooms', rooms);
-			//check if admin remove room from rooms list also 
+			io.emit('update room users', data);
+			//check if admin remove room from rooms list also
 		});
 
 		registerSocketEvent(socket, 'room created', function(data) {
 			rooms[data.room] = data;
-			rooms[data.room].noUsers = 1;
 			socket.join(data.room);
 			io.emit('update rooms', rooms);
 		});
@@ -69,6 +73,8 @@
 			};
 			//get thru all rooms and choose leave,not sure how to do it yet ??
 			io.emit('update users', data);
+			//io.emit('update rooms', rooms);
+			//io.emit('update room users', data);
 		});
 
 		registerSocketEvent(socket, 'username', function(data) {

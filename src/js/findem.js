@@ -2270,10 +2270,30 @@ module.exports = function (obj) {
 
 var process = module.exports = {};
 
-// cached from whatever global is present so that test runners that stub it don't break things.
-var cachedSetTimeout = setTimeout;
-var cachedClearTimeout = clearTimeout;
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
 
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+(function () {
+  try {
+    cachedSetTimeout = setTimeout;
+  } catch (e) {
+    cachedSetTimeout = function () {
+      throw new Error('setTimeout is not defined');
+    }
+  }
+  try {
+    cachedClearTimeout = clearTimeout;
+  } catch (e) {
+    cachedClearTimeout = function () {
+      throw new Error('clearTimeout is not defined');
+    }
+  }
+} ())
 var queue = [];
 var draining = false;
 var currentQueue;
@@ -6769,6 +6789,11 @@ function plural(ms, n, name) {
 $(document).ready(function() {
 
 	(function() {
+
+		/**
+		 * ---------------------------------------------------------------------------------------------------------------------------------
+		 * Initialization for app variables and more
+		 */
 		var socket = io(),
 		    ss = require('socket.io-stream'),
 		    data = {},
@@ -6785,18 +6810,23 @@ $(document).ready(function() {
 				CHAT : 1,
 				ROOM : 2
 			}
-		};
-
-		var stream = ss.createStream();
-		var filename = 'background.png';
-		var fs = require('fs');
-		var statuses = $("#chat-status>option").map(function() {
+		},
+		    stream = ss.createStream(),
+		    filename = 'background.png',
+		    fs = require('fs'),
+		    statuses = $("#chat-status>option").map(function() {
 			var val = $(this).val().toString();
 			return {
 				text : $(this).text(),
 				value : $(this).val()
 			};
 		});
+
+		/**
+		 * ---------------------------------------------------------------------------------------------------------------------------------
+		 * End init
+		 */
+
 		/*
 		 ss(socket).emit('profile-image', stream, {
 		 name : filename
@@ -6863,23 +6893,34 @@ $(document).ready(function() {
 		});
 		//$('.chatWindow').resizable({ alsoResize: '#messagesContainer-all,.chat-form' });
 
+		/**
+		 * Closing username modal
+		 * Check notification permission and get user location
+		 */
 		$('#myModal').on('hidden.bs.modal', function() {
 			checkNotificationPermission();
 			$.get("http://ipinfo.io", doLocationCallback, "jsonp").fail(doLocationCallback);
 		});
 
+		/**
+		 * Room creation modal
+		 * On close trigger event for room creation
+		 */
 		$('#roomModal').on('hidden.bs.modal', function() {
+			var users = [];
+			users.push(socket.id);
 			data = {
 				room : $('#roomName').val(),
 				password : $('#roomPassword').val(),
-				private : $('#roomPassword').val() ? true : false
+				private : $('#roomPassword').val() ? true : false,
+				users : users
 			};
-			
-			if(rooms[$('#roomName').val()]){
+
+			if (rooms[$('#roomName').val()]) {
 				alert("Room name already taken");
 				return;
 			}
-			
+
 			socket.emit('room created', data);
 			$('#roomName').val('');
 			$('#roomPassword').val('');
@@ -6890,6 +6931,9 @@ $(document).ready(function() {
 			//update chat rooms list
 		});
 
+		/**
+		 * Used for user location on callback after we know the city, country ( maybe more ) from the request ip
+		 */
 		function doLocationCallback(response) {
 			data = {
 				username : $('#username').val(),
@@ -6902,6 +6946,12 @@ $(document).ready(function() {
 		}
 
 		//remove notifications as the user requests.
+		/**
+		 * Used for desktop notifications
+		 * Check if notification permission is activated
+		 * Spawn a notification showing that notifications are enabled in the application
+		 * Alert user if the browser does not support desktop notifications
+		 */
 		(function() {
 			this.spawnNotification = function(theBody, theIcon, theTitle) {
 				var options = {
@@ -6931,6 +6981,9 @@ $(document).ready(function() {
 			};
 		})();
 
+		/**
+		 * Different helper functions used in the app
+		 */
 		var helperFunctions = {
 			findLinks : function(text) {
 				var regx = /(http|https|ftp|ftps)\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(\/\S*)?/;
@@ -7029,6 +7082,21 @@ $(document).ready(function() {
 				clearTimeout(buttonsTimeout[roomId]);
 				$("#leave-" + roomId).remove();
 				$("#join-" + roomId).remove();
+			},
+			updateRoomUsersList : function(room) {
+				var roomUsersList = $('#users-' + room);
+				roomUsersList.empty();
+
+				for (var i = 0; i < rooms[room].users.length; i++) {
+
+					for (var k in connections) {
+						if (connections[k].id == '/#' + rooms[room].users[i]) {
+							var li = $("<li>").html(connections[k].username);
+							break;
+						}
+					}
+					roomUsersList.append(li);
+				}
 			}
 		};
 
@@ -7039,12 +7107,20 @@ $(document).ready(function() {
 			//maybe create cookie to remember settings and load settings first thing when on page.
 		};
 
+		/**
+		 * Trigger room creation modal
+		 */
 		this.addRoom = function() {
 			$("#roomModal").modal();
 			//open modal with room creation
 			//maybe add password ??
 		};
 
+		/**
+		 * Trigger for joining a room event
+		 * If the room is already opened just animate the window
+		 * Add event listeners if needed
+		 */
 		this.joinRoom = function(id) {
 			var roomId = id.split("-")[1];
 			helperFunctions.hideButtons(roomId);
@@ -7063,15 +7139,22 @@ $(document).ready(function() {
 			}
 		};
 
+		/**
+		 * Trigger for leave room event
+		 */
 		this.leaveRoom = function(id) {
 			var roomId = id.split("-")[1];
 			helperFunctions.hideButtons(roomId);
 			delete joinedRooms[roomId];
 			socket.emit('leave room', roomId);
+			removeChatWindow(id, global.windowTypes.ROOM);
 			//if admin reset list for all by deleting from rooms.
 			//if not just leave room thu event in server, then update my joined rooms list
 		};
 
+		/**
+		 * Trigger for room message event
+		 */
 		this.sendRoomData = function(id) {
 			var roomId = id.split("-")[1];
 			console.log(roomId);
@@ -7085,6 +7168,10 @@ $(document).ready(function() {
 			$("#" + id).val('');
 		};
 
+		/**
+		 * Triggered on typing
+		 * Used to trigger event to the other user
+		 */
 		this.doTypingMessage = function(id) {
 
 			var socketId;
@@ -7105,6 +7192,11 @@ $(document).ready(function() {
 			socket.emit('typing', data);
 		};
 
+		/**
+		 * Message event for a certain room
+		 * Append message to corresponding window if it exists ( add focus on window )
+		 * If it doesn't exist, create it, add event listeners for element,
+		 */
 		socket.on('room message', function(data) {
 			var connectionKeyOnClient;
 			for (var key in connections) {
@@ -7114,7 +7206,9 @@ $(document).ready(function() {
 				}
 			}
 
-			if (!rooms[data.roomName].opened || rooms[data.roomName].opened == false) {
+			console.log("mesaj la camere : ", rooms[data.roomName].opened, rooms[data.roomName].opened == false);
+
+			if (rooms[data.roomName].opened == false || !rooms[data.roomName].opened) {
 				createNewChatWindow(data.roomName, rooms, global.windowTypes.ROOM);
 				addEventListener('#roomWrittenText-' + data.roomName, 'keyup', keyUpHandlerRooms);
 			}
@@ -7129,13 +7223,13 @@ $(document).ready(function() {
 
 			helperFunctions.updateScroll(data.roomName);
 
-			//check if room is opened
-			//if not open it
-			//if it is opened,just post the message in there
-
-			console.log("message for room " + data.roomName + " :" + data.message + " from " + connections[connectionKeyOnClient].username);
 		});
 
+		/**
+		 * Is typing event
+		 * Display in the chat window the fact that a user is writing a message to the other person
+		 * Use a few seconds of delay after the user stopped typing
+		 */
 		socket.on('typing', function(data) {
 
 			var connectionKeyOnClient;
@@ -7160,6 +7254,14 @@ $(document).ready(function() {
 			}, 5000);
 		});
 
+		/**
+		 * Window creation function
+		 * Created for a certain type of window ( CHAT or ROOM )
+		 * Add some event listeners for the newly created element
+		 * Add it to page
+		 * Add element components according to window type
+		 * Add classes according to window type, also functions for actions in the same maner
+		 */
 		function createNewChatWindow(key, connection, type) {
 
 			console.log(connection, key);
@@ -7200,7 +7302,11 @@ $(document).ready(function() {
 				'id' : key.toString(),
 				'onclick' : type === global.windowTypes.CHAT ? "sendData('writtenText-'+this.id)" : "sendRoomData('roomWrittenText-'+this.id)"
 			}),
-			textToSend = $("<input  class='form-control " + classString + "-form-text' placeholder='Write your message here...'  autocomplete='off' >").attr('id', writtenText + "-" + key.toString());
+			textToSend = $("<input  class='form-control " + classString + "-form-text' placeholder='Write your message here...'  autocomplete='off' >").attr('id', writtenText + "-" + key.toString()),
+			roomUsersContainer = $("<div class='room-users-container'></div>"),
+			roomUsersList = $("<ul></ul>").attr({
+				"id" : "users-" + key.toString()
+			}).addClass("room-users-list");
 
 			messagesContainer.append(list);
 			form.append(sendButton, textToSend);
@@ -7212,11 +7318,32 @@ $(document).ready(function() {
 
 			chatWindow.append(pageHeader, messagesContainer, optionsContainer, form);
 
+			if (type === global.windowTypes.ROOM) {
+				roomUsersContainer.append(roomUsersList);
+				chatWindow.append(roomUsersContainer);
+
+				console.log("rooms: ", rooms);
+
+				//helperFunctions.updateRoomUsersList(key.toString());
+
+				for (var i = 0; i < rooms[key.toString()].users.length; i++) {
+
+					for (var k in connections) {
+						if (connections[k].id == '/#' + rooms[key.toString()].users[i]) {
+							var li = $("<li>").html(connections[k].username);
+							break;
+						}
+					}
+					roomUsersList.append(li);
+				}
+
+			}
+
 			$(document.body).append(chatWindow);
 
 			$('.' + classType).draggable({
 				containment : 'parent',
-				handle : ".lobby-header"
+				handle : ".pageHeader"
 			});
 
 			addEventListener('#' + classType + "-" + key.toString(), 'click', function(event) {
@@ -7233,11 +7360,18 @@ $(document).ready(function() {
 			});
 		};
 
+		/**
+		 * Remove chat window called from the interface for each window by a certain type
+		 * Don using helper function
+		 */
 		this.removeChatWindow = function(id, type) {
 
 			helperFunctions.removeWindow(id.split("-")[1], type === global.windowTypes.CHAT ? global.windowTypes.CHAT : global.windowTypes.ROOM);
 		};
 
+		/**
+		 * Buzz function called from the interface
+		 */
 		this.buzz = function(id) {
 
 			var connectionKeyOnClient = id.split("-")[1];
@@ -7251,6 +7385,11 @@ $(document).ready(function() {
 			socket.emit('buzz', data);
 		};
 
+		/**
+		 * Send message to certain window
+		 * Emit private message or public message for main lobby accordingly
+		 * Display links in message
+		 */
 		this.sendData = function(id) {
 
 			var elementId = "#" + id.toString(),
@@ -7302,6 +7441,11 @@ $(document).ready(function() {
 
 		};
 
+		/**
+		 * **Should have created a room
+		 * Main lobby chat message
+		 * Append to main window
+		 */
 		socket.on('chat message', function(data) {
 
 			if (!helperFunctions.windowOnFocus()) {
@@ -7312,6 +7456,9 @@ $(document).ready(function() {
 			helperFunctions.updateScroll();
 		});
 
+		/**
+		 * Buzz event for a certain window
+		 */
 		socket.on('buzz', function(data) {
 
 			var connectionKeyOnClient;
@@ -7345,6 +7492,12 @@ $(document).ready(function() {
 			audio.play();
 		});
 
+		/**
+		 * Private message event
+		 * Write message to corresponding window
+		 * If the window is opened add focus to window and animation
+		 * In the eventuality in which the window is not opened, open it and disaplay the message
+		 */
 		socket.on('private message', function(data) {
 			var connectionKeyOnClient;
 			for (var key in connections) {
@@ -7382,6 +7535,9 @@ $(document).ready(function() {
 			socket.emit('status change', data);
 		};
 
+		/**
+		 * Status change event for a certain user, append to user the correct status
+		 */
 		socket.on("status change", function(data) {
 
 			var connectionKeyOnClient;
@@ -7410,7 +7566,32 @@ $(document).ready(function() {
 
 		var buttonsTimeout = {};
 
+		/**
+		 * When a user leaves the room update list of users for rooms
+		 */
+		socket.on('update room users', function(data) {
+			if (data) {
+				helperFunctions.updateRoomUsersList(data);
+			} else {
+				//search rooms where the socket was in, and update.
+			}
+
+		});
+
+		/**
+		 *Update rooms when a rooms is created or closed.
+		 * keep property opened of window on new update
+		 * create room entry for list and append to list
+		 * clicking on a room opens options (buttons opacity on timeout)
+		 * double-clicking oppend a new window if the window is not already opened (only focus on window on this case).
+		 * create window if not present
+		 *  */
 		socket.on('update rooms', function(data) {
+			for (var key in rooms) {
+				if (rooms[key].opened) {
+					data[key].opened = rooms[key].opened;
+				}
+			}
 
 			rooms = data;
 			var roomType;
@@ -7420,7 +7601,7 @@ $(document).ready(function() {
 
 				roomType = rooms[key].private ? "private" : "public";
 
-				var li = $('<li>').addClass("room").attr('id', key.toString()).html(rooms[key].room+" Members:"+rooms[key].noUsers);
+				var li = $('<li>').addClass("room").attr('id', key.toString()).html(rooms[key].room + " Members:" + rooms[key].users.length);
 
 				$('#rooms').append(li);
 
@@ -7435,8 +7616,6 @@ $(document).ready(function() {
 
 					clearTimeout(buttonsTimeout[event.target.id]);
 					delete buttonsTimeout[event.target.id];
-					//add the two buttons for JOIN OR LEAVE.
-					//if joined on click open window + make the 2 buttons visible.
 
 					var join = $("<input class='btn-success btn room-button pull-right'  type = 'button' value='Join'/>").attr({
 						"id" : 'join-' + event.target.id,
@@ -7447,10 +7626,6 @@ $(document).ready(function() {
 						"onclick" : "leaveRoom(this.id)"
 					});
 
-					//joinedRooms[event.target.id] = true;
-					//TODO remove just for testing
-
-					console.log(event.target.id, " in room ", joinedRooms[event.target.id]);
 					if (joinedRooms[event.target.id]) {
 
 						$("#leave-" + event.target.id).length > 0 ? "" : leave.appendTo($("#" + event.target.id)).animate({
@@ -7501,6 +7676,12 @@ $(document).ready(function() {
 
 		});
 
+		/**
+		 * Event on user disconnecting from chat.
+		 * An opened conversation is prompted that the user left.
+		 * Update users list.
+		 * Event listener on click to open window or focus if already opened.
+		 */
 		socket.on('update users', function(data) {
 
 			var connectionKeyOnClient;
