@@ -118,29 +118,40 @@ $(document).ready(function() {
 		 * Room creation modal
 		 * On close trigger event for room creation
 		 */
-		$('#roomModal').on('hidden.bs.modal', function() {
-			var users = [];
-			users.push(socket.id);
-			data = {
-				room : $('#roomName').val(),
-				password : $('#roomPassword').val(),
-				private : $('#roomPassword').val() ? true : false,
-				users : users
-			};
+		this.closeRoomModal = function() {
 
-			if (rooms[$('#roomName').val()]) {
-				alert("Room name already taken");
-				return;
+			if ($('#roomName').val()) {
+				var users = [];
+				users.push(socket.id);
+				data = {
+					room : $('#roomName').val(),
+					password : $('#roomPassword').val(),
+					private : $('#roomPassword').val() ? true : false,
+					users : users
+				};
+
+				if (rooms[$('#roomName').val()]) {
+					alert("Room name already taken");
+					return;
+				}
+
+				socket.emit('room created', data);
+				$('#roomName').val('');
+				$('#roomPassword').val('');
+				data.admin = true;
+				joinedRooms[data.room] = data;
+				$('#roomModal').modal('toggle');
+				//create chat room window
+				//room created
+				//update chat rooms list
+			} else {
+				$('#roomName-container').addClass('has-error');
 			}
 
-			socket.emit('room created', data);
-			$('#roomName').val('');
-			$('#roomPassword').val('');
-			data.admin = true;
-			joinedRooms[data.room] = data;
-			//create chat room window
-			//room created
-			//update chat rooms list
+		};
+
+		$('#roomModal').on('hidden.bs.modal', function() {
+			$('#roomName-container').removeClass('has-error');
 		});
 
 		/**
@@ -331,15 +342,37 @@ $(document).ready(function() {
 		/**
 		 * Trigger for joining a room event
 		 * If the room is already opened just animate the window
+		 * Check for password and prompt for pass
 		 * Add event listeners if needed
 		 */
 		this.joinRoom = function(id) {
 			var roomId = id.split("-")[1];
 			helperFunctions.hideButtons(roomId);
+			console.log(!joinedRooms[roomId],joinedRooms[roomId]);
 			if (!joinedRooms[roomId]) {
+
 				joinedRooms[roomId] = rooms[roomId];
-				socket.emit('join room', roomId);
-				//after this one open a window
+
+				if (rooms[roomId].private) {
+
+					$("#passModal").modal();
+					$('#passModal').on('hidden.bs.modal', function() {
+						data = {
+							name : roomId,
+							password : $('#password').val()
+						};
+						console.log("about to send,",data);
+						socket.emit('join room', data);
+						//$('#password').val(null);
+					});
+					return;
+				} else {
+					data = {
+						name : roomId
+					};
+					socket.emit('join room', data);
+				}
+
 			} else {
 				if (rooms[roomId].opened) {
 					helperFunctions.shakeAnimation($("#roomWindow-" + roomId));
@@ -350,6 +383,21 @@ $(document).ready(function() {
 				}
 			}
 		};
+
+		/*
+		this.closePasswordModal = function() {
+		if ($('#password').val()) {
+		data = {
+		name : roomId,
+		password : $('#password').val()
+		};
+		socket.emit('join room', data);
+		$('#password').val('');
+		$('#passModal').modal('toggle');
+		} else {
+		//add class and say that it is mandatory TODO
+		}
+		};*/
 
 		/**
 		 * Trigger for leave room event
@@ -369,7 +417,6 @@ $(document).ready(function() {
 		 */
 		this.sendRoomData = function(id) {
 			var roomId = id.split("-")[1];
-			console.log(roomId);
 			data = {
 				me : socket.id,
 				roomName : roomId,
@@ -404,6 +451,11 @@ $(document).ready(function() {
 			socket.emit('typing', data);
 		};
 
+		socket.on('wrong', function(data) {
+			delete joinedRooms[data.roomName];
+			//alert(data.message);
+		});
+
 		/**
 		 * Message event for a certain room
 		 * Append message to corresponding window if it exists ( add focus on window )
@@ -417,8 +469,6 @@ $(document).ready(function() {
 					break;
 				}
 			}
-
-			console.log("mesaj la camere : ", rooms[data.roomName].opened, rooms[data.roomName].opened == false);
 
 			if (rooms[data.roomName].opened == false || !rooms[data.roomName].opened) {
 				createNewChatWindow(data.roomName, rooms, global.windowTypes.ROOM);

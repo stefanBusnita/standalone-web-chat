@@ -1,14 +1,18 @@
 (function() {
 	var app = require('express')(),
+	    CryptoJS = require("crypto-js"),
 	    http = require('http').Server(app),
 	    globals = require(__dirname + '/globals.js'),
 	    io = require('socket.io')(http),
 	    ss = require('socket.io-stream'),
 	    connections = [],
 	    rooms = {},
+	    passwords = {},
 	    express = require("express"),
 	    data = {},
-	    noUsers = 0;
+	    noUsers = 0,
+	    mySuperNotSoSecretKey = 'secret key 123',
+	    wrongPasswordMessage = "Wrong password ! Gotcha ! :)";
 	var path = require('path');
 	var fs = require('fs');
 
@@ -35,10 +39,29 @@
 		});
 
 		registerSocketEvent(socket, 'join room', function(data) {
-			socket.join(data);
-			rooms[data].users.push(socket.conn.id);
-			io.emit('update rooms', rooms);
-			io.emit('update room users', data);
+			
+			if (rooms[data.name].private) {
+
+				var bytes = CryptoJS.AES.decrypt(passwords[data.name].toString(), mySuperNotSoSecretKey),
+				    plaintext = bytes.toString(CryptoJS.enc.Utf8);
+
+				console.log(plaintext, data);
+				if (String(plaintext) == String(data.password)) {
+					joinRoomCallback(data, socket);
+					return;
+				} else {
+					console.log("wrong pass");
+					data = {
+						message : wrongPasswordMessage,
+						roomName : data.name
+					};
+
+					io.to(connections[socket.conn.id].id).emit('wrong', data);
+					return;
+				}
+			} else {
+				joinRoomCallback(data, socket);
+			}
 		});
 
 		registerSocketEvent(socket, 'leave room', function(data) {
@@ -55,6 +78,13 @@
 		});
 
 		registerSocketEvent(socket, 'room created', function(data) {
+
+			if (data.private) {
+				var ciphertext = CryptoJS.AES.encrypt(data.password, mySuperNotSoSecretKey);
+				passwords[data.room] = ciphertext;
+				delete data.password;
+			}
+
 			rooms[data.room] = data;
 			socket.join(data.room);
 			io.emit('update rooms', rooms);
@@ -150,6 +180,13 @@
 		});
 
 	});
+
+	function joinRoomCallback(data, socket) {
+		socket.join(data.name);
+		rooms[data.name].users.push(socket.conn.id);
+		io.emit('update rooms', rooms);
+		io.emit('update room users', data.name);
+	};
 
 	function registerSocketEvent(socket, type, fn) {
 
