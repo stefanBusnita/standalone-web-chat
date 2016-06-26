@@ -52,13 +52,15 @@
 						<h4 class="modal-title">Private room</h4>
 					</div>
 					<div class="modal-body">
-						<div>
-							<label>Password</label>
-							<input class="form-control modal-user-username" maxlength="10" name="password" id="password" type="text" autocomplete="off" />
+						<div id="password-container">
+							<label>Password<span class="mandatory">*</span></label>
+							<input class="form-control modal-user-username" maxlength="10" name="password" id="password" type="password" autocomplete="off" />
+							<span class="view-password glyphicon glyphicon-eye-open"></span>
 						</div>
 					</div>
 					<div class="modal-footer">
-						<button type="button" class="btn btn-default" data-dismiss="modal">
+						<span class="pull-left">Fields marked with <span class="mandatory">*</span> are mandatory.</span>
+						<button type="button" class="btn btn-default" onclick="closePasswordModal()">
 							Close
 						</button>
 					</div>
@@ -87,6 +89,7 @@
 						<div>
 							<label>Room password (complete for private room)</label>
 							<input class="form-control modal-rooms-password" type="password" name="password" id="roomPassword" type="text" autocomplete="off" />
+							<span class="view-password-creation glyphicon glyphicon-eye-open"></span>
 						</div>
 
 					</div>

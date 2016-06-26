@@ -141,9 +141,6 @@ $(document).ready(function() {
 				data.admin = true;
 				joinedRooms[data.room] = data;
 				$('#roomModal').modal('toggle');
-				//create chat room window
-				//room created
-				//update chat rooms list
 			} else {
 				$('#roomName-container').addClass('has-error');
 			}
@@ -152,6 +149,8 @@ $(document).ready(function() {
 
 		$('#roomModal').on('hidden.bs.modal', function() {
 			$('#roomName-container').removeClass('has-error');
+			$('#roomName').val('');
+			$('#roomPassword').val('');
 		});
 
 		/**
@@ -348,7 +347,7 @@ $(document).ready(function() {
 		this.joinRoom = function(id) {
 			var roomId = id.split("-")[1];
 			helperFunctions.hideButtons(roomId);
-			console.log(!joinedRooms[roomId],joinedRooms[roomId]);
+			console.log(!joinedRooms[roomId], joinedRooms[roomId]);
 			if (!joinedRooms[roomId]) {
 
 				joinedRooms[roomId] = rooms[roomId];
@@ -356,15 +355,7 @@ $(document).ready(function() {
 				if (rooms[roomId].private) {
 
 					$("#passModal").modal();
-					$('#passModal').on('hidden.bs.modal', function() {
-						data = {
-							name : roomId,
-							password : $('#password').val()
-						};
-						console.log("about to send,",data);
-						socket.emit('join room', data);
-						//$('#password').val(null);
-					});
+					$('#password').data("roomName", roomId);
 					return;
 				} else {
 					data = {
@@ -384,20 +375,38 @@ $(document).ready(function() {
 			}
 		};
 
-		/*
 		this.closePasswordModal = function() {
-		if ($('#password').val()) {
-		data = {
-		name : roomId,
-		password : $('#password').val()
+
+			if ($('#password').val()) {
+				data = {
+					name : $('#password').data("roomName"),
+					password : $('#password').val()
+				};
+				socket.emit('join room', data);
+				$('#password').val('');
+				$('#passModal').modal('toggle');
+				$('#password').removeData();
+			} else {
+				$('#password-container').addClass('has-error');
+			}
 		};
-		socket.emit('join room', data);
-		$('#password').val('');
-		$('#passModal').modal('toggle');
-		} else {
-		//add class and say that it is mandatory TODO
-		}
-		};*/
+
+		$('#passModal').on('hidden.bs.modal', function() {
+			$('#password-container').removeClass('has-error');
+			$('#password').val('');
+			$('#password').removeData();
+		});
+
+		$(".glyphicon-eye-open").mousedown(function() {
+			$("#password").attr('type', 'text');
+			$("#roomPassword").attr('type', 'text');
+		}).mouseup(function() {
+			$("#password").attr('type', 'password');
+			$("#roomPassword").attr('type', 'password');
+		}).mouseout(function() {
+			$("#password").attr('type', 'password');
+			$("#roomPassword").attr('type', 'password');
+		});
 
 		/**
 		 * Trigger for leave room event
@@ -453,7 +462,7 @@ $(document).ready(function() {
 
 		socket.on('wrong', function(data) {
 			delete joinedRooms[data.roomName];
-			//alert(data.message);
+			alert(data.message);
 		});
 
 		/**

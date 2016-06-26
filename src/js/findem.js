@@ -2270,30 +2270,10 @@ module.exports = function (obj) {
 
 var process = module.exports = {};
 
-// cached from whatever global is present so that test runners that stub it
-// don't break things.  But we need to wrap it in a try catch in case it is
-// wrapped in strict mode code which doesn't define any globals.  It's inside a
-// function because try/catches deoptimize in certain engines.
+// cached from whatever global is present so that test runners that stub it don't break things.
+var cachedSetTimeout = setTimeout;
+var cachedClearTimeout = clearTimeout;
 
-var cachedSetTimeout;
-var cachedClearTimeout;
-
-(function () {
-  try {
-    cachedSetTimeout = setTimeout;
-  } catch (e) {
-    cachedSetTimeout = function () {
-      throw new Error('setTimeout is not defined');
-    }
-  }
-  try {
-    cachedClearTimeout = clearTimeout;
-  } catch (e) {
-    cachedClearTimeout = function () {
-      throw new Error('clearTimeout is not defined');
-    }
-  }
-} ())
 var queue = [];
 var draining = false;
 var currentQueue;
@@ -6929,9 +6909,6 @@ $(document).ready(function() {
 				data.admin = true;
 				joinedRooms[data.room] = data;
 				$('#roomModal').modal('toggle');
-				//create chat room window
-				//room created
-				//update chat rooms list
 			} else {
 				$('#roomName-container').addClass('has-error');
 			}
@@ -6940,6 +6917,8 @@ $(document).ready(function() {
 
 		$('#roomModal').on('hidden.bs.modal', function() {
 			$('#roomName-container').removeClass('has-error');
+			$('#roomName').val('');
+			$('#roomPassword').val('');
 		});
 
 		/**
@@ -7136,7 +7115,7 @@ $(document).ready(function() {
 		this.joinRoom = function(id) {
 			var roomId = id.split("-")[1];
 			helperFunctions.hideButtons(roomId);
-			console.log(!joinedRooms[roomId],joinedRooms[roomId]);
+			console.log(!joinedRooms[roomId], joinedRooms[roomId]);
 			if (!joinedRooms[roomId]) {
 
 				joinedRooms[roomId] = rooms[roomId];
@@ -7144,15 +7123,7 @@ $(document).ready(function() {
 				if (rooms[roomId].private) {
 
 					$("#passModal").modal();
-					$('#passModal').on('hidden.bs.modal', function() {
-						data = {
-							name : roomId,
-							password : $('#password').val()
-						};
-						console.log("about to send,",data);
-						socket.emit('join room', data);
-						//$('#password').val(null);
-					});
+					$('#password').data("roomName", roomId);
 					return;
 				} else {
 					data = {
@@ -7172,20 +7143,38 @@ $(document).ready(function() {
 			}
 		};
 
-		/*
 		this.closePasswordModal = function() {
-		if ($('#password').val()) {
-		data = {
-		name : roomId,
-		password : $('#password').val()
+
+			if ($('#password').val()) {
+				data = {
+					name : $('#password').data("roomName"),
+					password : $('#password').val()
+				};
+				socket.emit('join room', data);
+				$('#password').val('');
+				$('#passModal').modal('toggle');
+				$('#password').removeData();
+			} else {
+				$('#password-container').addClass('has-error');
+			}
 		};
-		socket.emit('join room', data);
-		$('#password').val('');
-		$('#passModal').modal('toggle');
-		} else {
-		//add class and say that it is mandatory TODO
-		}
-		};*/
+
+		$('#passModal').on('hidden.bs.modal', function() {
+			$('#password-container').removeClass('has-error');
+			$('#password').val('');
+			$('#password').removeData();
+		});
+
+		$(".glyphicon-eye-open").mousedown(function() {
+			$("#password").attr('type', 'text');
+			$("#roomPassword").attr('type', 'text');
+		}).mouseup(function() {
+			$("#password").attr('type', 'password');
+			$("#roomPassword").attr('type', 'password');
+		}).mouseout(function() {
+			$("#password").attr('type', 'password');
+			$("#roomPassword").attr('type', 'password');
+		});
 
 		/**
 		 * Trigger for leave room event
@@ -7241,7 +7230,7 @@ $(document).ready(function() {
 
 		socket.on('wrong', function(data) {
 			delete joinedRooms[data.roomName];
-			//alert(data.message);
+			alert(data.message);
 		});
 
 		/**
