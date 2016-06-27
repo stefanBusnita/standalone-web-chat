@@ -490,6 +490,7 @@ $(document).ready(function() {
 
 			if (!el.is(":focus")) {
 				helperFunctions.shakeAnimation($('#roomWindow-' + data.roomName));
+				spawnNotification(helperFunctions.findLinks(data.message), "", "Room " + data.roomName + " from " + connections[connectionKeyOnClient].username);
 			}
 
 			helperFunctions.updateScroll(data.roomName);
@@ -793,6 +794,7 @@ $(document).ready(function() {
 
 			if (!el.is(":focus")) {
 				helperFunctions.shakeAnimation($('#chatWindow-' + connectionKeyOnClient));
+				spawnNotification(helperFunctions.findLinks(data.message), "", "Private message from " + data.me.username);
 			}
 
 			helperFunctions.updateScroll(connectionKeyOnClient);
@@ -829,7 +831,6 @@ $(document).ready(function() {
 				$("#myModal").modal();
 				return;
 			}
-
 			username = data.username;
 			$("option[value='1']").attr('selected', 'selected');
 			addEventListener('#chat-status', 'change', statusChangeHandler);
@@ -900,17 +901,17 @@ $(document).ready(function() {
 					if (joinedRooms[event.target.id]) {
 
 						$("#leave-" + event.target.id).length > 0 ? "" : leave.appendTo($("#" + event.target.id)).animate({
-							opacity : '0.2' // for instance
+							opacity : '0.2' 
 						}, 5000);
 
 					} else {
 
 						$("#leave-" + event.target.id).length > 0 && $("#join-" + event.target.id).length > 0 ? "" : (function() {
 							leave.appendTo($("#" + event.target.id)).animate({
-								opacity : '0.2' // for instance
+								opacity : '0.2' 
 							}, 5000);
 							join.appendTo($("#" + event.target.id)).animate({
-								opacity : '0.2' // for instance
+								opacity : '0.2' 
 							}, 5000);
 						})();
 
@@ -1015,6 +1016,55 @@ $(document).ready(function() {
 			}
 			$('#chat-users-no').text(size);
 		});
+
+	})();
+
+	/**
+	 * Create cookies ( set name-value pair, and days untill expiration)
+	 * Read cookies (go thru all cookies and, elim all white space, check if name is equal to search and return substring)
+	 * Delete cookies ( find same cookie by name and set expiration date to -1)
+	 */
+	(function() {//maybe move to another script ??
+		this.createCookie = function(name, value, days) {
+			if (days) {
+				var date = new Date();
+				date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+				var expires = "; expires=" + date.toGMTString();
+			} else {
+				var expires = "";
+			}
+			var nameValuePair = name + "=" + value,
+			    path = "/",
+			    pathPrefix = "; path=" + path;
+
+			document.cookie = nameValuePair + expires + pathPrefix;
+		};
+
+		this.readCookie = function(name) {
+			var searchedCookie = name + "=",
+			    cookies = document.cookie.split(';'),
+			    cookie;
+			for (var i = 0; i < cookies.length; i++) {
+				cookie = cookies[i];
+				while (cookie.charAt(0) == ' ')
+				cookie = cookie.substring(1, cookie.length);
+				if (cookie.indexOf(searchedCookie) == 0)
+					return cookie.substring(searchedCookie.length, cookie.length);
+			}
+			return null;
+		};
+
+		this.eraseCookie = function(name) {
+			if (getCookie(name)) { // if it exists 
+				createCookie(name, "", -1);
+			}
+		};
+		
+		function getCookie(name) {
+			var regexp = new RegExp("(?:^" + name + "|;\s*" + name + ")=(.*?)(?:;|$)", "g");
+			var result = regexp.exec(document.cookie);
+			return (result === null) ? null : result[1];
+		}
 
 	})();
 

@@ -2270,10 +2270,30 @@ module.exports = function (obj) {
 
 var process = module.exports = {};
 
-// cached from whatever global is present so that test runners that stub it don't break things.
-var cachedSetTimeout = setTimeout;
-var cachedClearTimeout = clearTimeout;
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
 
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+(function () {
+  try {
+    cachedSetTimeout = setTimeout;
+  } catch (e) {
+    cachedSetTimeout = function () {
+      throw new Error('setTimeout is not defined');
+    }
+  }
+  try {
+    cachedClearTimeout = clearTimeout;
+  } catch (e) {
+    cachedClearTimeout = function () {
+      throw new Error('clearTimeout is not defined');
+    }
+  }
+} ())
 var queue = [];
 var draining = false;
 var currentQueue;
@@ -7258,6 +7278,7 @@ $(document).ready(function() {
 
 			if (!el.is(":focus")) {
 				helperFunctions.shakeAnimation($('#roomWindow-' + data.roomName));
+				spawnNotification(helperFunctions.findLinks(data.message), "", "Room "+data.roomName +"from "+connections[connectionKeyOnClient].username);
 			}
 
 			helperFunctions.updateScroll(data.roomName);
@@ -7561,6 +7582,7 @@ $(document).ready(function() {
 
 			if (!el.is(":focus")) {
 				helperFunctions.shakeAnimation($('#chatWindow-' + connectionKeyOnClient));
+				spawnNotification(helperFunctions.findLinks(data.message), "", "Private message from"+data.me.username);
 			}
 
 			helperFunctions.updateScroll(connectionKeyOnClient);
@@ -7596,8 +7618,7 @@ $(document).ready(function() {
 				alert("username already chosen");
 				$("#myModal").modal();
 				return;
-			}
-
+			}						
 			username = data.username;
 			$("option[value='1']").attr('selected', 'selected');
 			addEventListener('#chat-status', 'change', statusChangeHandler);
@@ -7784,6 +7805,45 @@ $(document).ready(function() {
 			$('#chat-users-no').text(size);
 		});
 
+	})();
+
+	/**
+	 * Create cookies ( set name-value pair, and days untill expiration)
+	 * Read cookies (go thru all cookies and, elim all white space, check if name is equal to search and return substring)
+	 * Delete cookies ( find same cookie by name and set expiration date to -1)
+	 */
+	(function() {//maybe move to another script ??
+		this.createCookie = function(name, value, days) {
+			if (days) {
+				var date = new Date();
+				date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+				var expires = "; expires=" + date.toGMTString();
+			} else {
+				var expires = "";
+			}
+			var nameValuePair = name + "=" + value,
+			    path = "/",
+			    pathPrefix = "; path=" + path;
+
+			document.cookie = nameValuePair + expires + pathPrefix;
+		};
+
+		this.readCookie = function(name) {
+			var nameEQ = name + "=";
+			var cookies = document.cookie.split(';');
+			for (var i = 0; i < cookies.length; i++) {
+				var cookie = cookies[i];
+				while (cookie.charAt(0) == ' ')
+				cookie = cookie.substring(1, cookie.length);
+				if (cookie.indexOf(nameEQ) == 0)
+					return cookie.substring(nameEQ.length, cookie.length);
+			}
+			return null;
+		};
+
+		this.eraseCookie = function(name) {
+			createCookie(name, "", -1);
+		};
 	})();
 
 	(function() {
