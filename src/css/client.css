@@ -301,3 +301,10 @@ transform: translate3d(4px, 0, 0);
 	top: 102px;
 	cursor: pointer;
 }
+.notification-info-footer{
+	width: 176px;
+}
+#notification-option-time{
+	display: inline-block;
+	width: 42px;
+}

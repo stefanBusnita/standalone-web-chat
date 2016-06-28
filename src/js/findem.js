@@ -6789,6 +6789,77 @@ function plural(ms, n, name) {
 $(document).ready(function() {
 
 	(function() {
+		var handlers = [];
+		this.addEventListener = function(element, type, fn) {
+			$(element).on(type, fn);
+			handlers[element] = new Array(5);
+			handlers[element][type] = fn;
+		};
+
+		this.removeEventListener = function(element, type) {
+			//TODO check here if ok ! ! !
+			for (var i = 0; i < type.length; i++) {
+				if (handlers[element]) {
+					$(element).off(type[i], handlers[element][type]);
+					delete handlers[element][type];
+				}
+			}
+		};
+	})();
+
+	addEventListener('#writtenText-all', 'keyup', keyUpHandler);
+
+	/**
+	 * Create cookies ( set name-value pair, and days untill expiration)
+	 * Read cookies (go thru all cookies and, elim all white space, check if name is equal to search and return substring)
+	 * Delete cookies ( find same cookie by name and set expiration date to -1)
+	 */
+	(function() {//maybe move to another script
+
+		this.createCookie = function(name, value, days) {
+			if (days) {
+				var date = new Date();
+				date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+				var expires = "; expires=" + date.toGMTString();
+			} else {
+				var expires = "";
+			}
+			var nameValuePair = name + "=" + value,
+			    path = "/",
+			    pathPrefix = "; path=" + path;
+
+			document.cookie = nameValuePair + expires + pathPrefix;
+		};
+
+		this.readCookie = function(name) {
+			var searchedCookie = name + "=",
+			    cookies = document.cookie.split(';'),
+			    cookie;
+			for (var i = 0; i < cookies.length; i++) {
+				cookie = cookies[i];
+				while (cookie.charAt(0) == ' ')
+				cookie = cookie.substring(1, cookie.length);
+				if (cookie.indexOf(searchedCookie) == 0)
+					return cookie.substring(searchedCookie.length, cookie.length);
+			}
+			return null;
+		};
+
+		this.eraseCookie = function(name) {
+			if (getCookie(name)) {// if it exists
+				createCookie(name, "", -1);
+			}
+		};
+
+		function getCookie(name) {
+			var regexp = new RegExp("(?:^" + name + "|;\s*" + name + ")=(.*?)(?:;|$)", "g");
+			var result = regexp.exec(document.cookie);
+			return (result === null) ? null : result[1];
+		}
+
+	})();
+
+	(function() {
 
 		/**
 		 * ---------------------------------------------------------------------------------------------------------------------------------
@@ -6803,7 +6874,6 @@ $(document).ready(function() {
 		    joinedRooms = {},
 		    notifications = [],
 		    notificationProperties = {
-			timeout : 2000
 		},
 		    global = {
 			windowTypes : {
@@ -6821,6 +6891,19 @@ $(document).ready(function() {
 				value : $(this).val()
 			};
 		});
+
+		function loadSettings() {
+			notificationProperties = JSON.parse(readCookie("chat-options"));
+			notificationProperties == null ? notificationProperties = {
+				timeout : 2, //default timeout
+				room : true,
+				private : true,
+				lobby : true,
+				buzz : true
+			} : "";
+		};
+
+		loadSettings();
 
 		/**
 		 * ---------------------------------------------------------------------------------------------------------------------------------
@@ -6963,6 +7046,11 @@ $(document).ready(function() {
 		 * Alert user if the browser does not support desktop notifications
 		 */
 		(function() {
+
+			var enableButton = $("<button type='button' class='btn btn-success' onclick='checkNotificationPermission()'>Enable</button>").attr({
+				'id' : 'notification-enable'
+			});
+
 			this.spawnNotification = function(theBody, theIcon, theTitle) {
 				var options = {
 					body : theBody,
@@ -6971,23 +7059,32 @@ $(document).ready(function() {
 				var notification = new Notification(theTitle, options);
 				setTimeout(function() {
 					notification.close();
-				}, notificationProperties.timeout);
+				}, notificationProperties.timeout * 1000);
 			};
 
 			this.checkNotificationPermission = function() {
+				$('#notification-status').html("<b>Disabled</b>");
+				$('#notification-status').append(enableButton);
+
 				if (!("Notification" in window)) {
 					alert("This browser does not support desktop notification. Please use Mozilla or Chrome.");
+					$('#notification-status').html("<b>Disabled.Please use Mozilla or Chrome.</b>");
 					return;
 				} else if (Notification.permission === "granted") {
+					$('#notification-status').html("<b>Active</b>");
+					$('#notification-enable').remove();
 					spawnNotification("Hey ! I'll tell you when there is some activity.", "", "Welcome to standalone web-chat");
 				} else if (Notification.permission !== 'denied') {
 
 					Notification.requestPermission(function(permission) {
 						if (permission === "granted") {
 							spawnNotification("Hey ! I'll tell you when there is some activity", "", "Welcome to standalone web-chat");
+							$('#notification-status').html("<b>Active</b>");
+							$('#notification-enable').remove();
 						}
 					});
 				}
+
 			};
 		})();
 
@@ -7112,9 +7209,40 @@ $(document).ready(function() {
 
 		var timeoutCheck;
 
+		/**
+		 * open settings modal and add to interface currently selected options
+		 */
 		this.openSettings = function() {
-			//open modal with settings, and show notification settings and other things.
-			//maybe create cookie to remember settings and load settings first thing when on page.
+			$('#modalSettings').modal();
+			if (notificationProperties) {
+				$('#notification-option-time').val(notificationProperties.timeout);
+				$('#notification-option-rooms').prop('checked', notificationProperties.room);
+				$('#notification-option-private').prop('checked', notificationProperties.private);
+				$('#notification-option-lobby').prop('checked', notificationProperties.lobby);
+				$('#notification-option-buzz').prop('checked', notificationProperties.buzz);
+			}
+		};
+
+		/**
+		 * save settings on modal close
+		 * create a cookie with a few properties
+		 */
+		this.saveSettings = function() {
+			notificationProperties = {
+				timeout : $('#notification-option-time').val(),
+				room : $('#notification-option-rooms').prop('checked'),
+				private : $('#notification-option-private').prop('checked'),
+				lobby : $('#notification-option-lobby').prop('checked'),
+				buzz : $('#notification-option-buzz').prop('checked')
+			};
+			createCookie("chat-options", JSON.stringify(notificationProperties), 7);
+			loadSettings();
+			$('#notification-option-time').val(null);
+			$('#notification-option-rooms').prop('checked', false);
+			$('#notification-option-private').prop('checked', false);
+			$('#notification-option-lobby').prop('checked', false);
+			$('#notification-option-buzz').prop('checked', false);
+			$('#modalSettings').modal('toggle');
 		};
 
 		/**
@@ -7122,8 +7250,6 @@ $(document).ready(function() {
 		 */
 		this.addRoom = function() {
 			$("#roomModal").modal();
-			//open modal with room creation
-			//maybe add password ??
 		};
 
 		/**
@@ -7278,7 +7404,9 @@ $(document).ready(function() {
 
 			if (!el.is(":focus")) {
 				helperFunctions.shakeAnimation($('#roomWindow-' + data.roomName));
-				spawnNotification(helperFunctions.findLinks(data.message), "", "Room "+data.roomName +"from "+connections[connectionKeyOnClient].username);
+				if (notificationProperties.room) {
+					spawnNotification(helperFunctions.findLinks(data.message), "", "Room " + data.roomName + " from " + connections[connectionKeyOnClient].username);
+				}
 			}
 
 			helperFunctions.updateScroll(data.roomName);
@@ -7323,8 +7451,6 @@ $(document).ready(function() {
 		 * Add classes according to window type, also functions for actions in the same maner
 		 */
 		function createNewChatWindow(key, connection, type) {
-
-			console.log(connection, key);
 
 			if (type === global.windowTypes.CHAT) {
 				connections[key].opened = true;
@@ -7508,7 +7634,7 @@ $(document).ready(function() {
 		 */
 		socket.on('chat message', function(data) {
 
-			if (!helperFunctions.windowOnFocus()) {
+			if (!helperFunctions.windowOnFocus() && notificationProperties.lobby) {
 				spawnNotification(data.me.username + ": " + helperFunctions.findLinks(data.message), "", "Main lobby");
 			}
 
@@ -7547,9 +7673,10 @@ $(document).ready(function() {
 			helperFunctions.updateScroll(connectionKeyOnClient);
 
 			// maybe do a funny func move
-
-			var audio = new Audio('static/doorbell.wav');
-			audio.play();
+			if (notificationProperties.buzz) {
+				var audio = new Audio('static/doorbell.wav');
+				audio.play();
+			}
 		});
 
 		/**
@@ -7582,7 +7709,9 @@ $(document).ready(function() {
 
 			if (!el.is(":focus")) {
 				helperFunctions.shakeAnimation($('#chatWindow-' + connectionKeyOnClient));
-				spawnNotification(helperFunctions.findLinks(data.message), "", "Private message from"+data.me.username);
+				if (notificationProperties.private) {
+					spawnNotification(helperFunctions.findLinks(data.message), "", "Private message from " + data.me.username);
+				}
 			}
 
 			helperFunctions.updateScroll(connectionKeyOnClient);
@@ -7618,7 +7747,7 @@ $(document).ready(function() {
 				alert("username already chosen");
 				$("#myModal").modal();
 				return;
-			}						
+			}
 			username = data.username;
 			$("option[value='1']").attr('selected', 'selected');
 			addEventListener('#chat-status', 'change', statusChangeHandler);
@@ -7689,17 +7818,17 @@ $(document).ready(function() {
 					if (joinedRooms[event.target.id]) {
 
 						$("#leave-" + event.target.id).length > 0 ? "" : leave.appendTo($("#" + event.target.id)).animate({
-							opacity : '0.2' // for instance
+							opacity : '0.2'
 						}, 5000);
 
 					} else {
 
 						$("#leave-" + event.target.id).length > 0 && $("#join-" + event.target.id).length > 0 ? "" : (function() {
 							leave.appendTo($("#" + event.target.id)).animate({
-								opacity : '0.2' // for instance
+								opacity : '0.2'
 							}, 5000);
 							join.appendTo($("#" + event.target.id)).animate({
-								opacity : '0.2' // for instance
+								opacity : '0.2'
 							}, 5000);
 						})();
 
@@ -7806,66 +7935,6 @@ $(document).ready(function() {
 		});
 
 	})();
-
-	/**
-	 * Create cookies ( set name-value pair, and days untill expiration)
-	 * Read cookies (go thru all cookies and, elim all white space, check if name is equal to search and return substring)
-	 * Delete cookies ( find same cookie by name and set expiration date to -1)
-	 */
-	(function() {//maybe move to another script ??
-		this.createCookie = function(name, value, days) {
-			if (days) {
-				var date = new Date();
-				date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-				var expires = "; expires=" + date.toGMTString();
-			} else {
-				var expires = "";
-			}
-			var nameValuePair = name + "=" + value,
-			    path = "/",
-			    pathPrefix = "; path=" + path;
-
-			document.cookie = nameValuePair + expires + pathPrefix;
-		};
-
-		this.readCookie = function(name) {
-			var nameEQ = name + "=";
-			var cookies = document.cookie.split(';');
-			for (var i = 0; i < cookies.length; i++) {
-				var cookie = cookies[i];
-				while (cookie.charAt(0) == ' ')
-				cookie = cookie.substring(1, cookie.length);
-				if (cookie.indexOf(nameEQ) == 0)
-					return cookie.substring(nameEQ.length, cookie.length);
-			}
-			return null;
-		};
-
-		this.eraseCookie = function(name) {
-			createCookie(name, "", -1);
-		};
-	})();
-
-	(function() {
-		var handlers = [];
-		this.addEventListener = function(element, type, fn) {
-			$(element).on(type, fn);
-			handlers[element] = new Array(5);
-			handlers[element][type] = fn;
-		};
-
-		this.removeEventListener = function(element, type) {
-			//TODO check here if ok ! ! !
-			for (var i = 0; i < type.length; i++) {
-				if (handlers[element]) {
-					$(element).off(type[i], handlers[element][type]);
-					delete handlers[element][type];
-				}
-			}
-		};
-	})();
-
-	addEventListener('#writtenText-all', 'keyup', keyUpHandler);
 
 	function keyUpHandler(event) {
 		var keycode = (event.keyCode ? event.keyCode : event.which);

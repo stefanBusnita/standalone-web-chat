@@ -40,6 +40,60 @@
 			</div>
 		</div>
 
+		<div class="modal fade" name="modal-settings" id="modalSettings" role="dialog">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal">
+							&times;
+						</button>
+						<h4 class="modal-title">Application options</h4>
+					</div>
+					<div class="modal-body">
+						Notifications status : <span id="notification-status"></span>
+						
+						<h5>Notifications for :</h5> 
+						<div class="checkbox">
+							<label>
+								<input type="checkbox" id="notification-option-lobby">
+								Main lobby </label>
+						</div>
+						<div class="checkbox">
+							<label>
+								<input type="checkbox" id="notification-option-private">
+								Private messages</label>
+						</div>
+						<div class="checkbox">
+							<label>
+								<input type="checkbox" id="notification-option-rooms">
+								Room activity</label>
+						</div>
+
+						<label for="notification-option-time">Time on screen</label>
+						<input type="text" class="form-control" id="notification-option-time" placeholder="mins">
+						<label>sec</label>
+
+						<div class="checkbox">
+							<label>
+								<input type="checkbox" id="notification-option-buzz">
+								Buzz sound</label>
+						</div>
+
+					</div>
+					<div class="modal-footer">
+						<div class="notification-info-footer">
+							<span class="pull-left">*Activtate cookies for settings.</span>
+							<span class="pull-left">**Settings are valid for 7 days.</span>
+						</div>
+						<button type="button" class="btn btn-default" onclick="saveSettings()">
+							Save
+						</button>
+					</div>
+				</div>
+
+			</div>
+		</div>
+
 		<div class="modal fade" name="modal-user" id="passModal" role="dialog">
 			<div class="modal-dialog">
 
