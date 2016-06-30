@@ -208,7 +208,7 @@ $(document).ready(function() {
 				users.push(socket.id);
 				data = {
 					room : $('#roomName').val(),
-					password : $('#roomPassword').val(),
+					password : new Buffer($('#roomPassword').val()).toString('base64'),
 					private : $('#roomPassword').val() ? true : false,
 					users : users
 				};
@@ -403,18 +403,54 @@ $(document).ready(function() {
 				$("#join-" + roomId).remove();
 			},
 			updateRoomUsersList : function(room) {
-				var roomUsersList = $('#users-' + room);
-				roomUsersList.empty();
-
-				for (var i = 0; i < rooms[room].users.length; i++) {
-
-					for (var k in connections) {
-						if (connections[k].id == '/#' + rooms[room].users[i]) {
-							var li = $("<li>").html(connections[k].username);
-							break;
-						}
+				if ( typeof room != 'object') {//update for one room only
+					var roomUsersList = $('#users-' + room);
+					roomUsersList.empty();
+					
+					if(rooms[room].users.length==0){
+						console.log("no more users in the room, we can close the room");
+						//send disable event for input text area
 					}
-					roomUsersList.append(li);
+					
+					for (var i = 0; i < rooms[room].users.length; i++) {
+
+						for (var k in connections) {
+							if (connections[k].id == '/#' + rooms[room].users[i]) {
+								var li = $("<li>").html(connections[k].username);
+								break;
+							}
+						}
+						roomUsersList.append(li);
+					}
+					
+				} else {
+					for (var k in joinedRooms) {
+						
+						if(rooms[joinedRooms[k].room].users.length==0){
+							console.log("no more users in the room, we can close the room");
+							//send disable event for input text area
+						}
+
+						if (rooms[joinedRooms[k].room].opened) {
+
+							var roomUsersList = $('#users-' + joinedRooms[k].room);
+
+							$('#messages-' + joinedRooms[k].room).append((new Date()).toLocaleTimeString() + " User " + room.disconnected + " left the chat room :(");
+
+							$('#users-' + joinedRooms[k].room).empty();
+							for (var j = 0; j < joinedRooms[k].users.length; j++) {
+								for (var l in connections) {
+									if (connections[l].id == '/#' + joinedRooms[k].users[j]) {
+										var li = $("<li>").html(connections[l].username);
+										roomUsersList.append(li);
+									}
+								}
+							}
+
+						}
+
+					}
+
 				}
 			}
 		};
@@ -506,7 +542,7 @@ $(document).ready(function() {
 			if ($('#password').val()) {
 				data = {
 					name : $('#password').data("roomName"),
-					password : $('#password').val()
+					password : new Buffer($('#password').val()).toString('base64')
 				};
 				socket.emit('join room', data);
 				$('#password').val('');
@@ -969,19 +1005,17 @@ $(document).ready(function() {
 
 		/**
 		 * When a user leaves the room update list of users for rooms
+		 * Same case when a user joins a room
+		 * Same case when a user disconnects
 		 */
 		socket.on('update room users', function(data) {
-			if (data) {
-				helperFunctions.updateRoomUsersList(data);
-			} else {
-				//search rooms where the socket was in, and update.
-			}
-
+			helperFunctions.updateRoomUsersList(data);
 		});
 
 		/**
 		 *Update rooms when a rooms is created or closed.
 		 * keep property opened of window on new update
+		 * update joined rooms buffer with new coresponding room
 		 * create room entry for list and append to list
 		 * clicking on a room opens options (buttons opacity on timeout)
 		 * double-clicking oppend a new window if the window is not already opened (only focus on window on this case).
@@ -992,6 +1026,9 @@ $(document).ready(function() {
 				if (rooms[key].opened) {
 					data[key].opened = rooms[key].opened;
 				}
+				if (joinedRooms[key]) {
+					joinedRooms[key] = data[key];
+				}
 			}
 
 			rooms = data;
@@ -999,6 +1036,13 @@ $(document).ready(function() {
 			$('#rooms').empty();
 
 			for (var key in rooms) {
+				
+				if(rooms[key].users.length==0){
+					console.log("there is a room with no more users ! send event to server to close it !");
+					//maybe compose a timeout for it
+					//add to a temporary list each room
+					//send event for deletion at the end of the loop
+				}
 
 				roomType = rooms[key].private ? "private" : "public";
 
@@ -1032,7 +1076,7 @@ $(document).ready(function() {
 						$("#leave-" + event.target.id).length > 0 ? "" : leave.appendTo($("#" + event.target.id)).animate({
 							opacity : '0.2'
 						}, 5000);
-
+						//TODO add open button
 					} else {
 
 						$("#leave-" + event.target.id).length > 0 && $("#join-" + event.target.id).length > 0 ? "" : (function() {
@@ -1074,6 +1118,8 @@ $(document).ready(function() {
 				}, false);
 
 			}
+
+			//
 
 		});
 

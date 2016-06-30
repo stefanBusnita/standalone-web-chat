@@ -12,4 +12,4 @@ var globalFlags = {
 	}	
 };
 
-module.exports = globalFlags; 
+exports.globalFlags = globalFlags; 
