@@ -1,5 +1,21 @@
 $(document).ready(function() {
 
+	
+	//Workaround on finding the headers on a loaded page in the js of that page
+	var req = new XMLHttpRequest();
+	req.open('GET', document.location, false);
+	req.send(null);
+	var headers = req.getAllResponseHeaders().toLowerCase();
+	// end workaround
+	
+	//TODO
+	/**
+	 * Create DB connection data in separate JS ( different DBS maybe)
+	 * Create coonection props file and export
+	 * 
+	 */
+			
+
 	(function() {
 		var handlers = [];
 		this.addEventListener = function(element, type, fn) {
@@ -406,12 +422,12 @@ $(document).ready(function() {
 				if ( typeof room != 'object') {//update for one room only
 					var roomUsersList = $('#users-' + room);
 					roomUsersList.empty();
-					
-					if(rooms[room].users.length==0){
+
+					if (rooms[room].users.length == 0) {
 						console.log("no more users in the room, we can close the room");
 						//send disable event for input text area
 					}
-					
+
 					for (var i = 0; i < rooms[room].users.length; i++) {
 
 						for (var k in connections) {
@@ -422,11 +438,11 @@ $(document).ready(function() {
 						}
 						roomUsersList.append(li);
 					}
-					
+
 				} else {
 					for (var k in joinedRooms) {
-						
-						if(rooms[joinedRooms[k].room].users.length==0){
+
+						if (rooms[joinedRooms[k].room].users.length == 0) {
 							console.log("no more users in the room, we can close the room");
 							//send disable event for input text area
 						}
@@ -714,7 +730,7 @@ $(document).ready(function() {
 				    pageHeaderText = "Room " + connection[key].room;
 			}
 
-			var pos = helperFunctions.makeNewPosition(150),
+			var pos = helperFunctions.makeNewPosition(300),
 			    chatWindow = $("<div class=" + classType + ">").css({
 				top : pos[0],
 				left : pos[1]
@@ -1036,8 +1052,8 @@ $(document).ready(function() {
 			$('#rooms').empty();
 
 			for (var key in rooms) {
-				
-				if(rooms[key].users.length==0){
+
+				if (rooms[key].users.length == 0) {
 					console.log("there is a room with no more users ! send event to server to close it !");
 					//maybe compose a timeout for it
 					//add to a temporary list each room

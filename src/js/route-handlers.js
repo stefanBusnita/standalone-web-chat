@@ -3,6 +3,7 @@
  * Sending the html file back to the client with the chat template
  * In the unfortunate case that something bad happens along the way, just blame the Daleks 
  */
+
 var routeHandlers = {}; 
 
 routeHandlers.chatTemplateFile = function(req, res) {
@@ -12,6 +13,19 @@ routeHandlers.chatTemplateFile = function(req, res) {
 	});
 
 };
+
+routeHandlers.chatTemplateFileForUsername = function(req, res) {
+
+	console.log(req.params);
+	
+	res.sendFile('template.html', {
+			"root" : __dirname + '/../html',
+			headers : {
+				username : req.params.username
+			}
+		});
+};
+
 routeHandlers.routeErrorHandler = function(err, req, res, next) {
 	res.status(500);
 	res.json({

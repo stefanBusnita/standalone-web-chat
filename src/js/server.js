@@ -1,5 +1,6 @@
 (function() {
 	var app = require('express')(),
+		pgp = require('pg-promise')(),
 	    compression = require('compression'),
 	    CryptoJS = require("crypto-js"),
 	    http = require('http').Server(app),
@@ -34,7 +35,6 @@
 	app.use("/node", express.static(__dirname + '/../../node_modules/flag-icon-css'));
 	app.use("/images", express.static(__dirname + '/../img'));
 	app.use("/static", express.static(__dirname + '/../sounds'));
-	app.use(handlers.routeHandlers.routeErrorHandler);
 	/**
 	 * -------------------------------------------------------------------------------------------
 	 */
@@ -298,9 +298,10 @@
 		return false;
 
 	}
-
+	app.use(handlers.routeHandlers.routeErrorHandler);
 	app.get('/', handlers.routeHandlers.chatTemplateFile);	
-
+	app.get('/active/:username', handlers.routeHandlers.chatTemplateFileForUsername);
+	
 	http.listen(3000, function() {
 		console.log('Server started on PORT :3000');
 	});

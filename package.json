@@ -13,7 +13,9 @@
     "flag-icon-css" : "*",
     "crypto-js" : "3.1.6",
     "uglify-js" : "2.6.4",
-    "compression" : "1.6.2"
+    "compression" : "1.6.2",
+    "pg-promise" : "5.1.0",
+    "pg-monitor" : "0.5.11" 
   },
   "engines": {
     "node": ">=0.10.0"
