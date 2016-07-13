@@ -1,6 +1,7 @@
 (function() {
 	var app = require('express')(),
-		pgp = require('pg-promise')(),
+		//pgp = require('pg-promise')(),
+		//sockets = require('signal-master'),
 	    compression = require('compression'),
 	    CryptoJS = require("crypto-js"),
 	    http = require('http').Server(app),
@@ -305,5 +306,10 @@
 	http.listen(3000, function() {
 		console.log('Server started on PORT :3000');
 	});
+	
+	//Tried config for signalling server, turn and stun
+	//var server = app.listen(3001);
+	//var config = {};
+   // sockets(server, config); // config is the same that server.js uses
 
 })();

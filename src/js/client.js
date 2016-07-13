@@ -1,20 +1,18 @@
 $(document).ready(function() {
 
-	
 	//Workaround on finding the headers on a loaded page in the js of that page
 	var req = new XMLHttpRequest();
 	req.open('GET', document.location, false);
 	req.send(null);
 	var headers = req.getAllResponseHeaders().toLowerCase();
 	// end workaround
-	
+
 	//TODO
 	/**
 	 * Create DB connection data in separate JS ( different DBS maybe)
 	 * Create coonection props file and export
-	 * 
+	 *
 	 */
-			
 
 	(function() {
 		var handlers = [];
@@ -118,6 +116,19 @@ $(document).ready(function() {
 				text : $(this).text(),
 				value : $(this).val()
 			};
+		});
+
+		var webrtc = new SimpleWebRTC({
+			// the id/element dom element that will hold "our" video
+			localVideoEl : 'localVideo',
+			// the id/element dom element that will hold remote videos
+			remoteVideosEl : 'remotesVideos',
+			// immediately ask for camera access
+			autoRequestMedia : true
+		});
+
+		webrtc.on('readyToCall', function() {
+			webrtc.joinRoom('thatPersonName');
 		});
 
 		function loadSettings() {
