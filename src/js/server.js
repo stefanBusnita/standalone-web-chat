@@ -216,6 +216,10 @@
 			socket.broadcast.emit('chat message', data);
 
 		});
+		
+		registerSocketEvent(socket, 'call', function(sentData) {
+			socket.broadcast.to(sentData.id).emit('call', sentData);
+		});
 
 		registerSocketEvent(socket, 'buzz', function(sentData) {
 			socket.broadcast.to(sentData.id).emit('buzz', sentData);

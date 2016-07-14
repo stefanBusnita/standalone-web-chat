@@ -116,20 +116,12 @@ $(document).ready(function() {
 				text : $(this).text(),
 				value : $(this).val()
 			};
-		});
-
-		var webrtc = new SimpleWebRTC({
-			// the id/element dom element that will hold "our" video
+		}),webrtc = new SimpleWebRTC({
 			localVideoEl : 'localVideo',
-			// the id/element dom element that will hold remote videos
 			remoteVideosEl : 'remotesVideos',
-			// immediately ask for camera access
 			autoRequestMedia : true
-		});
-
-		webrtc.on('readyToCall', function() {
-			webrtc.joinRoom('thatPersonName');
-		});
+		});;
+		
 
 		function loadSettings() {
 			notificationProperties = JSON.parse(readCookie("chat-options"));
@@ -654,6 +646,96 @@ $(document).ready(function() {
 			alert(data.message);
 		});
 
+		socket.on('call', function(data) {
+			var connectionKeyOnClient;
+			for (var key in connections) {
+				if (connections[key].id == "/#" + data.me) {
+					connectionKeyOnClient = key;
+					break;
+				}
+			}
+		
+			if (!connections[connectionKeyOnClient].opened || connections[connectionKeyOnClient].opened == false) {
+				createNewChatWindow(connectionKeyOnClient, connections[connectionKeyOnClient], global.windowTypes.CHAT);
+
+				addEventListener('#writtenText-' + connectionKeyOnClient, 'keyup', keyUpHandler);
+
+			}
+
+			el = $('#writtenText-' + connectionKeyOnClient);
+
+			$('#messages-' + connectionKeyOnClient).append($('<li>').html("Hi ! wanna talk ? (" + (new Date()).toLocaleTimeString() + ")")+"<button onclick='acceptCall(this.id)' id='answear-"+connectionKeyOnClient+"'>Clicky here to answear</button>");
+
+			if (!el.is(":focus")) {
+				helperFunctions.shakeAnimation($('#chatWindow-' + connectionKeyOnClient));
+			}
+
+			helperFunctions.updateScroll(connectionKeyOnClient);
+
+			/*webrtc.on('readyToCall', function() {
+				webrtc.joinRoom(connectionKeyOnClient);
+			});*/
+
+		});
+
+		/*webrtc.on('videoAdded', function(video, peer) {
+			console.log('video added', peer);
+			var remotes = document.getElementById('remotes');
+			if (remotes) {
+				var container = document.createElement('div');
+				container.className = 'videoContainer';
+				container.id = 'container_' + webrtc.getDomId(peer);
+				container.appendChild(video);
+
+				// suppress contextmenu
+				video.oncontextmenu = function() {
+					return false;
+				};
+
+				remotes.appendChild(container);
+			}
+		});*/
+
+		this.acceptCall = function(data) {
+			//button dissapears and we go on ready to call and join room
+			
+			var connectionKeyOnClient = data.split("-")[1];
+			console.log("accept call "+socket.id+"--"+connections[connectionKeyOnClient].id);
+			
+			
+			
+			webrtc.on('readyToCall', function() {
+				webrtc.joinRoom(connections[connectionKeyOnClient].id);
+			});
+		};
+
+		this.rejectCall = function(data) {
+			//button dissapears and we send message back to user that the call was rejected.
+		};
+
+		this.callPerson = function(person) {
+			//TODO open windows for the two video streams close to the person window.
+			//first of all extend
+			var connectionKeyOnClient = person.split("-")[1];
+			console.log("going to call "+connections[connectionKeyOnClient].id+"--"+socket.id);
+			data = {
+				id : connections[connectionKeyOnClient].id,
+				me : socket.id
+			};
+			
+			 webrtc = new SimpleWebRTC({
+			localVideoEl : 'localVideo',
+			remoteVideosEl : 'remotesVideos',
+			autoRequestMedia : true
+		});
+
+			socket.emit('call', data);
+			webrtc.on('readyToCall', function() {
+				webrtc.joinRoom(connections[connectionKeyOnClient].id+""+socket.id);
+			});
+		};
+		
+
 		/**
 		 * Message event for a certain room
 		 * Append message to corresponding window if it exists ( add focus on window )
@@ -752,9 +834,13 @@ $(document).ready(function() {
 			});
 			pageHeader = $("<div class='pageHeader' id='main-lobby-header'>").text(pageHeaderText),
 			optionsContainer = $("<div class='chat-options-container'></div>"),
-			buzzButton = $("<button class='btn btn-default chat-buzz'><span class='glyphicon glyphicon-bell'></span></button>").attr({
+			buzzButton = $("<button class='btn btn-default chat-window-option-button'><span class='glyphicon glyphicon-bell'></span></button>").attr({
 				'id' : 'buzz-' + key.toString(),
 				'onclick' : "buzz(this.id)"
+			}),
+			callButton = $("<button class='btn btn-default chat-window-option-button'><span class='glyphicon glyphicon-facetime-video'></span></button>").attr({
+				'id' : 'video-' + key.toString(),
+				'onclick' : "callPerson(this.id)"
 			}),
 			messagesContainer = $("<div class='messagesContainer'>").attr('id', "messagesContainer-" + key.toString()),
 			list = $("<ul class='messages'>").attr('id', "messages-" + key.toString() + ""),
@@ -774,7 +860,7 @@ $(document).ready(function() {
 			pageHeader.append(closeButton);
 
 			if (type === global.windowTypes.CHAT) {
-				optionsContainer.append(buzzButton);
+				optionsContainer.append(buzzButton,callButton);
 			}
 
 			chatWindow.append(pageHeader, messagesContainer, optionsContainer, form);
