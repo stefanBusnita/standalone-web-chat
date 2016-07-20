@@ -34,6 +34,7 @@
 	app.use("/scripts", express.static(__dirname));
 	app.use("/styles", express.static(__dirname + '/../css'));
 	app.use("/node", express.static(__dirname + '/../../node_modules/flag-icon-css'));
+	app.use("/tst", express.static(__dirname + '/../../node_modules/simplewebrtc'));
 	app.use("/images", express.static(__dirname + '/../img'));
 	app.use("/static", express.static(__dirname + '/../sounds'));
 	/**
@@ -219,6 +220,10 @@
 		
 		registerSocketEvent(socket, 'call', function(sentData) {
 			socket.broadcast.to(sentData.id).emit('call', sentData);
+		});
+		
+		registerSocketEvent(socket, 'callAccepted', function(sentData) {
+			socket.broadcast.to(sentData.id).emit('callAccepted', sentData);
 		});
 
 		registerSocketEvent(socket, 'buzz', function(sentData) {

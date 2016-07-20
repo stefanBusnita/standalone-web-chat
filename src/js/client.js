@@ -116,12 +116,12 @@ $(document).ready(function() {
 				text : $(this).text(),
 				value : $(this).val()
 			};
-		}),webrtc = new SimpleWebRTC({
+		}),
+		    webrtc = new SimpleWebRTC({
 			localVideoEl : 'localVideo',
-			remoteVideosEl : 'remotesVideos',
+			remoteVideosEl : '',
 			autoRequestMedia : true
-		});;
-		
+		});
 
 		function loadSettings() {
 			notificationProperties = JSON.parse(readCookie("chat-options"));
@@ -358,7 +358,15 @@ $(document).ready(function() {
 					}
 					removeEventListener(key.toString(), ["click", "keyup"]);
 
+					if ($('#chatWindow-' + key.toString() + " .videoContainer").length) {
+						webrtc.leaveRoom();
+					};
+
 					$('#chatWindow-' + key.toString()).remove();
+					currentVideoContainer = '#chatWindow-';
+
+					helperFunctions.addCallButtonForOpenedWindows();
+
 				} else if (type === global.windowTypes.ROOM) {
 
 					if (rooms[key]) {
@@ -470,6 +478,35 @@ $(document).ready(function() {
 
 					}
 
+				}
+			},
+			checkVideoAndAudioPermission : function(successCallback, errorCallback) {
+				webrtc.startLocalVideo();
+				navigator.getUserMedia({
+					video : true,
+					audio : true
+				}, errorCallback);
+			},
+			addCallButtonForOpenedWindows : function() {
+				for (var clientKey in connections) {
+					if (connections[clientKey].opened) {
+						var options = $('#chat-options-' + clientKey.toString());
+						if (!$('#video-' + clientKey.toString()).length) {
+							var callButton = $("<button class='btn btn-default chat-window-option-button'><span class='glyphicon glyphicon-facetime-video'></span></button>").attr({
+								'id' : 'video-' + clientKey,
+								'onclick' : "callPerson(this.id)"
+							});
+							options.append(callButton);
+						}
+
+					}
+				}
+			},
+			removeCallButtonForOpenedWindow : function(key) { // all except this one
+				for (var clientKey in connections) {
+					if (clientKey!==key && connections[clientKey].opened) {
+						$('#video-'+clientKey).remove();
+					}
 				}
 			}
 		};
@@ -654,7 +691,7 @@ $(document).ready(function() {
 					break;
 				}
 			}
-		
+
 			if (!connections[connectionKeyOnClient].opened || connections[connectionKeyOnClient].opened == false) {
 				createNewChatWindow(connectionKeyOnClient, connections[connectionKeyOnClient], global.windowTypes.CHAT);
 
@@ -664,7 +701,7 @@ $(document).ready(function() {
 
 			el = $('#writtenText-' + connectionKeyOnClient);
 
-			$('#messages-' + connectionKeyOnClient).append($('<li>').html("Hi ! wanna talk ? (" + (new Date()).toLocaleTimeString() + ")")+"<button onclick='acceptCall(this.id)' id='answear-"+connectionKeyOnClient+"'>Clicky here to answear</button>");
+			$('#messages-' + connectionKeyOnClient).append($('<li>').html("Hi ! wanna talk ? (" + (new Date()).toLocaleTimeString() + ")") + "<button onclick='acceptCall(this.id)' id='answear-" + connectionKeyOnClient + "'>Clicky here to answear</button>");
 
 			if (!el.is(":focus")) {
 				helperFunctions.shakeAnimation($('#chatWindow-' + connectionKeyOnClient));
@@ -673,68 +710,126 @@ $(document).ready(function() {
 			helperFunctions.updateScroll(connectionKeyOnClient);
 
 			/*webrtc.on('readyToCall', function() {
-				webrtc.joinRoom(connectionKeyOnClient);
-			});*/
+			 webrtc.joinRoom(connectionKeyOnClient);
+			 });*/
 
 		});
 
-		/*webrtc.on('videoAdded', function(video, peer) {
+		webrtc.on('videoAdded', function(video, peer) {
 			console.log('video added', peer);
-			var remotes = document.getElementById('remotes');
+			console.log('dom Id from web rtc is ', webrtc.getDomId(peer));
+			console.log('we should append remote here', currentVideoContainer);
+			var remotes;
+			remotes = $(currentVideoContainer);
 			if (remotes) {
-				var container = document.createElement('div');
-				container.className = 'videoContainer';
-				container.id = 'container_' + webrtc.getDomId(peer);
-				container.appendChild(video);
+				var container = $('<div>').addClass('videoContainer').attr({
+					'id' : 'container-' + webrtc.getDomId(peer)
+				});
+				container.append(video);
 
-				// suppress contextmenu
 				video.oncontextmenu = function() {
 					return false;
 				};
 
-				remotes.appendChild(container);
-			}
-		});*/
+				remotes.append(container);
 
+				if (peer && peer.pc) {
+					peer.pc.on('iceConnectionStateChange', function(event) {
+						var keyOnClient = currentVideoContainer.split('-')[1];
+						switch (peer.pc.iceConnectionState) {
+						case 'checking':
+							$('#messages-' + keyOnClient).append($('<li>').html("Connecting to peer..."));
+							break;
+						case 'connected':
+						case 'completed':
+							$('#messages-' + keyOnClient).append($('<li>').html("Connection established."));
+							break;
+						case 'disconnected':
+							$('#messages-' + keyOnClient).append($('<li>').html("Disconnected."));
+							break;
+						case 'failed':
+							$('#messages-' + keyOnClient).append($('<li>').html("Connection has failed."));
+							break;
+						case 'closed':
+							$('#messages-' + keyOnClient).append($('<li>').html("Connection closed."));
+							break;
+						}
+					});
+				}
+			}
+
+		});
+
+		webrtc.on('videoRemoved', function(video, peer) {
+			var keyOnClient = currentVideoContainer.split('-')[1];
+			webrtc.leaveRoom();
+			$('#container-' + webrtc.getDomId(peer)).remove();
+			$('#messages-' + keyOnClient).append($('<li>').html(" (" + (new Date()).toLocaleTimeString() + "): " + "Video was closed by peer. Streaming is off."));
+			$('#chatWindow-' + keyOnClient).css({
+				'width' : 400
+			});
+			currentVideoContainer = '#chatWindow-';
+			helperFunctions.addCallButtonForOpenedWindows();
+		});
+
+		var currentVideoContainer = '#chatWindow-';
+		
+		/**
+		 * Accept call from other person
+		 * join room with name composed out of socketids of the two clients
+		 * remove call button from rest of the opened window users.
+		 */
 		this.acceptCall = function(data) {
 			//button dissapears and we go on ready to call and join room
-			
+
 			var connectionKeyOnClient = data.split("-")[1];
-			console.log("accept call "+socket.id+"--"+connections[connectionKeyOnClient].id);
-			
-			
-			
-			webrtc.on('readyToCall', function() {
-				webrtc.joinRoom(connections[connectionKeyOnClient].id);
+			currentVideoContainer += connectionKeyOnClient;
+
+			$(currentVideoContainer).css({
+				'width' : 800
 			});
+			
+			data = {
+				id : connections[connectionKeyOnClient].id,
+				me : socket.id
+			};
+
+			socket.emit('callAccepted', data);
+			
+			webrtc.joinRoom('/#' + socket.id + connections[connectionKeyOnClient].id);
+			helperFunctions.removeCallButtonForOpenedWindow(connectionKeyOnClient);
 		};
 
 		this.rejectCall = function(data) {
 			//button dissapears and we send message back to user that the call was rejected.
 		};
 
+		navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+		
+		/**
+		 * Video + audio call 
+		 * emit call event to that certain person
+		 * join room with name composed out of the two socketids
+		 * remove all call buttons from other windows except the one called.
+		 */
 		this.callPerson = function(person) {
 			//TODO open windows for the two video streams close to the person window.
-			//first of all extend
+			
 			var connectionKeyOnClient = person.split("-")[1];
-			console.log("going to call "+connections[connectionKeyOnClient].id+"--"+socket.id);
+			console.log("key on client ", connectionKeyOnClient);
+			currentVideoContainer += connectionKeyOnClient;
 			data = {
 				id : connections[connectionKeyOnClient].id,
 				me : socket.id
 			};
-			
-			 webrtc = new SimpleWebRTC({
-			localVideoEl : 'localVideo',
-			remoteVideosEl : 'remotesVideos',
-			autoRequestMedia : true
-		});
 
 			socket.emit('call', data);
-			webrtc.on('readyToCall', function() {
-				webrtc.joinRoom(connections[connectionKeyOnClient].id+""+socket.id);
+			webrtc.joinRoom(connections[connectionKeyOnClient].id + "/#" + socket.id);
+			$(currentVideoContainer).css({
+				'width' : 800
 			});
+			helperFunctions.removeCallButtonForOpenedWindow(connectionKeyOnClient);
 		};
-		
 
 		/**
 		 * Message event for a certain room
@@ -833,7 +928,9 @@ $(document).ready(function() {
 				'onclick' : "removeChatWindow(this.id," + type + ")"
 			});
 			pageHeader = $("<div class='pageHeader' id='main-lobby-header'>").text(pageHeaderText),
-			optionsContainer = $("<div class='chat-options-container'></div>"),
+			optionsContainer = $("<div class='chat-options-container'></div>").attr({
+				'id' : 'chat-options-' + key.toString()
+			}),
 			buzzButton = $("<button class='btn btn-default chat-window-option-button'><span class='glyphicon glyphicon-bell'></span></button>").attr({
 				'id' : 'buzz-' + key.toString(),
 				'onclick' : "buzz(this.id)"
@@ -860,7 +957,11 @@ $(document).ready(function() {
 			pageHeader.append(closeButton);
 
 			if (type === global.windowTypes.CHAT) {
-				optionsContainer.append(buzzButton,callButton);
+				if ($('.videoContainer').length) {
+					optionsContainer.append(buzzButton);
+				} else {
+					optionsContainer.append(buzzButton, callButton);
+				}
 			}
 
 			chatWindow.append(pageHeader, messagesContainer, optionsContainer, form);
@@ -1255,6 +1356,12 @@ $(document).ready(function() {
 			if (connectionKeyOnClient) {
 				$('#messages-' + connectionKeyOnClient).append($('<li>').html("User disconnected from chat."));
 				$('#writtenText-' + connectionKeyOnClient).attr({
+					"disabled" : true
+				});
+				$('#buzz-' + connectionKeyOnClient).attr({
+					"disabled" : true
+				});
+				$('#video-' + connectionKeyOnClient).attr({
 					"disabled" : true
 				});
 				if (!helperFunctions.windowOnFocus()) {
