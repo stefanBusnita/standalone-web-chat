@@ -225,6 +225,10 @@
 		registerSocketEvent(socket, 'callAccepted', function(sentData) {
 			socket.broadcast.to(sentData.id).emit('callAccepted', sentData);
 		});
+		
+		registerSocketEvent(socket, 'callRejected', function(sentData) {
+			socket.broadcast.to(sentData.id).emit('callRejected', sentData);
+		});
 
 		registerSocketEvent(socket, 'buzz', function(sentData) {
 			socket.broadcast.to(sentData.id).emit('buzz', sentData);
@@ -232,6 +236,13 @@
 
 		registerSocketEvent(socket, 'typing', function(sentData) {
 			socket.broadcast.to(sentData.to).emit('typing', sentData);
+		});
+		
+		registerSocketEvent(socket, 'typingRoom', function(sentData) {			
+			//check id the socket.id that sent this is in the room.  
+			sentData.sender = socket.conn.id;
+			io.to(sentData.roomName).emit('typingRoom', sentData);
+			
 		});
 
 		registerSocketEvent(socket, 'status change', function(sentData) {

@@ -9,9 +9,9 @@ $(document).ready(function() {
 
 	//TODO
 	/**
-	 * Create DB connection data in separate JS ( different DBS maybe)
+	 * Create DB connection data in separate JS ( different DBS maybe, start with postres)
 	 * Create coonection props file and export
-	 *
+	 * Config part for project, dev vs production, load config and other stuff, use browserify
 	 */
 
 	(function() {
@@ -139,65 +139,6 @@ $(document).ready(function() {
 		/**
 		 * ---------------------------------------------------------------------------------------------------------------------------------
 		 * End init
-		 */
-
-		/*
-		 ss(socket).emit('profile-image', stream, {
-		 name : filename
-		 });*/
-
-		$('#file').change(function(e) {
-			var file = e.target.files[0];
-			var stream = ss.createStream();
-
-			// upload a file to the server.
-			ss(socket).emit('file', stream, {
-				size : file.size
-			});
-			var blobStream = ss.createBlobReadStream(file);
-			var size = 0;
-
-			blobStream.on('data', function(chunk) {
-				size += chunk.length;
-				console.log(Math.floor(size / file.size * 100) + '%');
-			});
-
-			blobStream.pipe(stream);
-
-		});
-
-		ss(socket).on('file', function(data) {
-			console.log(data);
-			//downloadFileFromBlob([data], "gigi.jpg");
-		});
-
-		/*
-		 var downloadFileFromBlob = ( function() {
-		 var a = document.createElement("a");
-		 document.body.appendChild(a);
-		 a.style = "display: none";
-		 return function(data, fileName) {
-		 var blob = new Blob(data, {
-		 type : "octet/stream"
-		 }),
-		 url = window.URL.createObjectURL(blob);
-		 a.href = url;
-		 a.download = fileName;
-		 a.click();
-		 window.URL.revokeObjectURL(url);
-		 };
-		 }());*/
-
-		/*
-		 //send data
-		 ss(socket).on('file', function(stream) {
-		 fs.createReadStream('/path/to/file').pipe(stream);
-		 });
-
-		 // receive data
-		 ss(socket).emit('file', stream);
-		 stream.pipe(fs.createWriteStream('file.txt'));
-
 		 */
 
 		$("#myModal").modal();
@@ -443,7 +384,7 @@ $(document).ready(function() {
 
 						for (var k in connections) {
 							if (connections[k].id == '/#' + rooms[room].users[i]) {
-								var li = $("<li>").html(connections[k].username);
+								var li = $("<li id='roomUser" + room + "-" + connections[k].username + "'>").html(connections[k].username);
 								break;
 							}
 						}
@@ -502,16 +443,31 @@ $(document).ready(function() {
 					}
 				}
 			},
-			removeCallButtonForOpenedWindow : function(key) { // all except this one
+			removeCallButtonForOpenedWindow : function(key) {// all except this one
 				for (var clientKey in connections) {
-					if (clientKey!==key && connections[clientKey].opened) {
-						$('#video-'+clientKey).remove();
+					if (clientKey !== key && connections[clientKey].opened) {
+						$('#video-' + clientKey).remove();
 					}
+				}
+			},
+			openWindowForInfoIfClosed : function(connectionKeyOnClient) {
+				if (!connections[connectionKeyOnClient].opened || connections[connectionKeyOnClient].opened == false) {
+					createNewChatWindow(connectionKeyOnClient, connections[connectionKeyOnClient], global.windowTypes.CHAT);
+
+					addEventListener('#writtenText-' + connectionKeyOnClient, 'keyup', keyUpHandler);
+
+				}
+
+				el = $('#writtenText-' + connectionKeyOnClient);
+
+				if (!el.is(":focus")) {
+					helperFunctions.shakeAnimation($('#chatWindow-' + connectionKeyOnClient));
 				}
 			}
 		};
 
-		var timeoutCheck;
+		var timeoutCheck = {},
+		    roomTimeoutCheck = {};
 
 		/**
 		 * open settings modal and add to interface currently selected options
@@ -678,6 +634,16 @@ $(document).ready(function() {
 			socket.emit('typing', data);
 		};
 
+		/**
+		 * Emit event for typing message in room
+		 */
+		this.doTypingMessageRooms = function(id) {
+			data = {
+				roomName : id.split('-')[1]
+			};
+			socket.emit('typingRoom', data);
+		};
+
 		socket.on('wrong', function(data) {
 			delete joinedRooms[data.roomName];
 			alert(data.message);
@@ -701,7 +667,7 @@ $(document).ready(function() {
 
 			el = $('#writtenText-' + connectionKeyOnClient);
 
-			$('#messages-' + connectionKeyOnClient).append($('<li>').html("Hi ! wanna talk ? (" + (new Date()).toLocaleTimeString() + ")") + "<button onclick='acceptCall(this.id)' id='answear-" + connectionKeyOnClient + "'>Clicky here to answear</button>");
+			$('#messages-' + connectionKeyOnClient).append($("<li id='answear-reject-" + connectionKeyOnClient + "'>").html("Hi ! wanna talk ? (" + (new Date()).toLocaleTimeString() + ")" + "<button class='btn btn-success' onclick='acceptCall(this.id)' id='answear-" + connectionKeyOnClient + "'>Answear</button>" + "<button class='btn btn-danger' onclick='rejectCall(this.id)' id='reject-" + connectionKeyOnClient + "'>Reject</button>"));
 
 			if (!el.is(":focus")) {
 				helperFunctions.shakeAnimation($('#chatWindow-' + connectionKeyOnClient));
@@ -709,16 +675,14 @@ $(document).ready(function() {
 
 			helperFunctions.updateScroll(connectionKeyOnClient);
 
-			/*webrtc.on('readyToCall', function() {
-			 webrtc.joinRoom(connectionKeyOnClient);
-			 });*/
 
 		});
-
+		/**
+		 * On video added event
+		 * Append video container to corresponding window
+		 * Listen for iceConnectionStateChange and inform peer on connection status
+		 */
 		webrtc.on('videoAdded', function(video, peer) {
-			console.log('video added', peer);
-			console.log('dom Id from web rtc is ', webrtc.getDomId(peer));
-			console.log('we should append remote here', currentVideoContainer);
 			var remotes;
 			remotes = $(currentVideoContainer);
 			if (remotes) {
@@ -749,6 +713,7 @@ $(document).ready(function() {
 							break;
 						case 'failed':
 							$('#messages-' + keyOnClient).append($('<li>').html("Connection has failed."));
+							//on failed do something close window
 							break;
 						case 'closed':
 							$('#messages-' + keyOnClient).append($('<li>').html("Connection closed."));
@@ -760,6 +725,12 @@ $(document).ready(function() {
 
 		});
 
+		/**
+		 * On video removed event
+		 * 1.Remove video container
+		 * 2.Inform peer that window was closed and comm is of
+		 * 3.Resize window and add call option for opened windows again
+		 */
 		webrtc.on('videoRemoved', function(video, peer) {
 			var keyOnClient = currentVideoContainer.split('-')[1];
 			webrtc.leaveRoom();
@@ -770,10 +741,11 @@ $(document).ready(function() {
 			});
 			currentVideoContainer = '#chatWindow-';
 			helperFunctions.addCallButtonForOpenedWindows();
+			helperFunctions.updateScroll(keyOnClient);
 		});
 
 		var currentVideoContainer = '#chatWindow-';
-		
+
 		/**
 		 * Accept call from other person
 		 * join room with name composed out of socketids of the two clients
@@ -785,36 +757,133 @@ $(document).ready(function() {
 			var connectionKeyOnClient = data.split("-")[1];
 			currentVideoContainer += connectionKeyOnClient;
 
+			$('#answear-reject-' + connectionKeyOnClient).remove();
+
 			$(currentVideoContainer).css({
 				'width' : 800
 			});
-			
+			/**
+			 * openWindow if meanwhile the window was closed by the other peer
+			 */
 			data = {
 				id : connections[connectionKeyOnClient].id,
 				me : socket.id
 			};
 
 			socket.emit('callAccepted', data);
-			
+			$('#video-' + connectionKeyOnClient).attr({
+				'onclick' : 'removeChatCall(this.id)'
+			});
+
 			webrtc.joinRoom('/#' + socket.id + connections[connectionKeyOnClient].id);
 			helperFunctions.removeCallButtonForOpenedWindow(connectionKeyOnClient);
+			helperFunctions.updateScroll(connectionKeyOnClient);
+			//remove all except this one
 		};
 
+		/**
+		 * Reject call from a user
+		 * 1.Remove options to answear or reject call
+		 * 2.Print a message and show that the call rejection was done
+		 * 3.Emit event for callRejection
+		 */
 		this.rejectCall = function(data) {
-			//button dissapears and we send message back to user that the call was rejected.
+
+			var connectionKeyOnClient = data.split("-")[1];
+			$('#answear-reject-' + connectionKeyOnClient).remove();
+			data = {
+				id : connections[connectionKeyOnClient].id,
+				me : socket.id
+			};
+			$('#messages-' + connectionKeyOnClient).append($('<li>').html(" (" + (new Date()).toLocaleTimeString() + "): " + "You rejected the call..."));
+			socket.emit('callRejected', data);
+			helperFunctions.updateScroll(connectionKeyOnClient);
+
 		};
+
+		/**
+		 * Remove chat call on user request when pressing the call button again
+		 * 1.Leave room ( let the webrtc listeners handle the rest )
+		 * 2.Add callPerson on the button instead of removeChatCall, so another call can take place now
+		 * 3.update scroll
+		 */
+		this.removeChatCall = function(data) {
+			var connectionKeyOnClient = data.split("-")[1];
+			$('#video-' + connectionKeyOnClient).attr({
+				'onclick' : 'callPerson(this.id)'
+			});
+			webrtc.leaveRoom();
+			helperFunctions.updateScroll(connectionKeyOnClient);
+		};
+
+		/**
+		 * The call was accepted
+		 * 1. Prepare window for call, enlarge and add click event for end call.
+		 * 2.Check if window was closed by user, open window in order to start video
+		 */
+		socket.on('callAccepted', function(data) {
+			var connectionKeyOnClient;
+			for (var key in connections) {
+				if (connections[key].id == "/#" + data.me) {
+					connectionKeyOnClient = key;
+					break;
+				}
+			}
+			console.log(currentVideoContainer, currentVideoContainer.split("-").length, currentVideoContainer.split("-")[1]);
+			if (currentVideoContainer.split("-")[1] === "") {
+				currentVideoContainer += connectionKeyOnClient;
+			}
+
+			//TODO create function for this piece of code
+			helperFunctions.openWindowForInfoIfClosed(connectionKeyOnClient);
+			//untill here
+
+			$(currentVideoContainer).css({
+				'width' : 800
+			});
+			//maybe do the enlarge window thingy here
+			$('#video-' + connectionKeyOnClient).attr({
+				'onclick' : 'removeChatCall(this.id)'
+			});
+			helperFunctions.updateScroll(connectionKeyOnClient);
+		});
+
+		/**
+		 * Call rejected by peer
+		 * Print message to corresponding window
+		 * Add call button option for opened windows
+		 * reopen window and print message for rejected
+		 */
+		socket.on('callRejected', function(data) {
+			var connectionKeyOnClient;
+			for (var key in connections) {
+				if (connections[key].id == "/#" + data.me) {
+					connectionKeyOnClient = key;
+					break;
+				}
+			}
+			/**
+			 * openWindow if meanwhile the window was closed by the other peer
+			 * add call button again for all windows.
+			 */
+			helperFunctions.openWindowForInfoIfClosed(connectionKeyOnClient);
+
+			$('#messages-' + connectionKeyOnClient).append($('<li>').html(" (" + (new Date()).toLocaleTimeString() + "): " + "Call was rejected by peer."));
+			helperFunctions.addCallButtonForOpenedWindows();
+			helperFunctions.updateScroll(connectionKeyOnClient);
+		});
 
 		navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
-		
+
 		/**
-		 * Video + audio call 
+		 * Video + audio call
+		 * remove currently joined room
 		 * emit call event to that certain person
 		 * join room with name composed out of the two socketids
 		 * remove all call buttons from other windows except the one called.
 		 */
 		this.callPerson = function(person) {
-			//TODO open windows for the two video streams close to the person window.
-			
+			webrtc.leaveRoom();
 			var connectionKeyOnClient = person.split("-")[1];
 			console.log("key on client ", connectionKeyOnClient);
 			currentVideoContainer += connectionKeyOnClient;
@@ -822,12 +891,10 @@ $(document).ready(function() {
 				id : connections[connectionKeyOnClient].id,
 				me : socket.id
 			};
+			$('#messages-' + connectionKeyOnClient).append($('<li>').html(" (" + (new Date()).toLocaleTimeString() + "): " + "Calling...waiting for peer to answear"));
 
 			socket.emit('call', data);
 			webrtc.joinRoom(connections[connectionKeyOnClient].id + "/#" + socket.id);
-			$(currentVideoContainer).css({
-				'width' : 800
-			});
 			helperFunctions.removeCallButtonForOpenedWindow(connectionKeyOnClient);
 		};
 
@@ -887,11 +954,52 @@ $(document).ready(function() {
 				helperFunctions.updateScroll(connectionKeyOnClient);
 			}
 
-			clearTimeout(timeoutCheck);
+			clearTimeout(timeoutCheck[connections[connectionKeyOnClient].id]);
 
-			timeoutCheck = setTimeout(function() {
+			timeoutCheck[connections[connectionKeyOnClient].id] = setTimeout(function() {
 				$("#typing-" + connectionKeyOnClient).remove();
+				timeoutCheck[connections[connectionKeyOnClient].id] = undefined;
+				//used undef instead of delete for performance purposes
 			}, 5000);
+		});
+
+		/**
+		 * Is typing event
+		 * Search user in roomUsersList and add a color that shows he is typing
+		 * Use a few seconds of delay after the user stopped typing
+		 */
+		socket.on('typingRoom', function(data) {
+			var connectionKeyOnClient;
+
+			if (rooms[data.roomName].opened) {
+
+				for (var key in connections) {
+					if (connections[key].id == "/#" + data.sender) {
+						connectionKeyOnClient = key;
+						break;
+					}
+				}
+				//TODO id the room is not opened ( the window ), don;t append anything, don;t do anything
+
+				var value = $('#roomUser' + data.roomName + "-" + connections[connectionKeyOnClient].username).text(),
+				    pattern = new RegExp("^.*typing\.{3}$");
+				console.log(pattern.test(value), value);
+				if (pattern.test(value)) {
+					console.log("still typing");
+				} else {
+					console.log("now we can do stuff typing stopped");
+					$('#roomUser' + data.roomName + "-" + connections[connectionKeyOnClient].username).text(value + " typing....");
+				}
+
+				clearTimeout(roomTimeoutCheck[connectionKeyOnClient]);
+				//it should be an array here
+				roomTimeoutCheck[connectionKeyOnClient] = setTimeout(function() {
+					$('#roomUser' + data.roomName + "-" + connections[connectionKeyOnClient].username).text(connections[connectionKeyOnClient].username);
+					roomTimeoutCheck[connectionKeyOnClient] = undefined;
+				}, 2000);
+
+			}
+
 		});
 
 		/**
@@ -978,7 +1086,7 @@ $(document).ready(function() {
 
 					for (var k in connections) {
 						if (connections[k].id == '/#' + rooms[key.toString()].users[i]) {
-							var li = $("<li>").html(connections[k].username);
+							var li = $("<li id='roomUser" + key + "-" + connections[k].username + "'>").html(connections[k].username);
 							break;
 						}
 					}
@@ -1117,20 +1225,9 @@ $(document).ready(function() {
 				}
 			}
 
-			if (!connections[connectionKeyOnClient].opened || connections[connectionKeyOnClient].opened == false) {
-				createNewChatWindow(connectionKeyOnClient, connections[connectionKeyOnClient], global.windowTypes.CHAT);
-
-				addEventListener('#writtenText-' + connectionKeyOnClient, 'keyup', keyUpHandler);
-
-			}
-
-			el = $('#writtenText-' + connectionKeyOnClient);
+			helperFunctions.openWindowForInfoIfClosed(connectionKeyOnClient);
 
 			$('#messages-' + connectionKeyOnClient).append($('<li>').html("Buzzzzzzz ring ding ! (" + (new Date()).toLocaleTimeString() + ")"));
-
-			if (!el.is(":focus")) {
-				helperFunctions.shakeAnimation($('#chatWindow-' + connectionKeyOnClient));
-			}
 
 			helperFunctions.updateScroll(connectionKeyOnClient);
 
@@ -1431,7 +1528,7 @@ $(document).ready(function() {
 		if (keycode == '13') {
 			sendRoomData(event.target.id);
 		} else {
-
+			doTypingMessageRooms(event.target.id);
 		}
 		event.preventDefault();
 		event.stopPropagation();
