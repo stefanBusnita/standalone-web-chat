@@ -1,0 +1,1 @@
+module.exports = require(__dirname+"/config/" + (process.env.NODE_ENV || 'development'));  

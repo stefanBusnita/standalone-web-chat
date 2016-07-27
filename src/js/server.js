@@ -1,25 +1,23 @@
 (function() {
 	var app = require('express')(),
-		//pgp = require('pg-promise')(),
-		//sockets = require('signal-master'),
+	    config = require('./config'),
 	    compression = require('compression'),
 	    CryptoJS = require("crypto-js"),
 	    http = require('http').Server(app),
 	    globals = require(__dirname + '/globals.js'),
 	    handlers = require(__dirname + '/route-handlers.js'),
 	    io = require('socket.io')(http),
-	    ss = require('socket.io-stream'),
 	    connections = [],
 	    rooms = {},
 	    passwords = {},
 	    express = require("express"),
 	    data = {},
 	    noUsers = 0,
-	    mySuperNotSoSecretKey = 'B4c0/\/ with some secret key 123'+new Date().toString(), // USE DB IF THIS DOES NOT SUITE YOUR NEEDS :)
+	    mySuperNotSoSecretKey = 'B4c0/\/ with some secret key 123' + new Date().toString(), // USE DB IF THIS DOES NOT SUITE YOUR NEEDS :)
 	    wrongPasswordMessage = "Wrong password ! Gotcha ! :)";
 
 	app.use(compression({
-		level : 1
+		level : config.compression
 	}));
 
 	var path = require('path');
@@ -43,20 +41,6 @@
 
 	io.on('connection', function(socket) {
 
-		ss(socket).on('file', function(stream, data) {
-			//var filename = path.basename(data.name);
-			console.log(data.size);
-			var size = 0;
-
-			//stream.pipe(fs.createWriteStream(data));
-			/*
-			 ss(socket).emit('file', stream, {
-			 size : file.size
-			 });
-			 ss.createBlobReadStream(file).pipe(stream);			*/
-
-		});
-
 		/**
 		 * Join room event
 		 * check if password is ok, and do corresponding actions for each case.
@@ -69,8 +53,8 @@
 				    plaintext = bytes.toString(CryptoJS.enc.Utf8);
 
 				console.log(plaintext, data);
-				
-				if (String(plaintext) == new Buffer(data.password,'base64').toString('ascii')) {
+
+				if (String(plaintext) == new Buffer(data.password, 'base64').toString('ascii')) {
 					joinRoomCallback(data, socket);
 					return;
 				} else {
@@ -87,7 +71,7 @@
 				joinRoomCallback(data, socket);
 			}
 		});
-		
+
 		/**
 		 * Leaving a certain room
 		 * Remove our user from the rooms buffer
@@ -106,7 +90,7 @@
 		});
 
 		/**
-		 * Create room event 
+		 * Create room event
 		 * save password for later check and update rooms list to all
 		 * join room because you created it
 		 */
@@ -123,7 +107,7 @@
 			socket.join(data.room);
 			io.emit('update rooms', rooms);
 		});
-		
+
 		/**
 		 * Send room message to certain room
 		 */
@@ -206,7 +190,7 @@
 
 		});
 		/**
-		 * 
+		 *
 		 */
 		registerSocketEvent(socket, 'chat message', function(sentData) {
 			data = {
@@ -217,15 +201,15 @@
 			socket.broadcast.emit('chat message', data);
 
 		});
-		
+
 		registerSocketEvent(socket, 'call', function(sentData) {
 			socket.broadcast.to(sentData.id).emit('call', sentData);
 		});
-		
+
 		registerSocketEvent(socket, 'callAccepted', function(sentData) {
 			socket.broadcast.to(sentData.id).emit('callAccepted', sentData);
 		});
-		
+
 		registerSocketEvent(socket, 'callRejected', function(sentData) {
 			socket.broadcast.to(sentData.id).emit('callRejected', sentData);
 		});
@@ -237,20 +221,20 @@
 		registerSocketEvent(socket, 'typing', function(sentData) {
 			socket.broadcast.to(sentData.to).emit('typing', sentData);
 		});
-		
+
 		registerSocketEvent(socket, 'callStopped', function(sentData) {
 			socket.broadcast.to(sentData.to).emit('callStopped', sentData);
 		});
-		
+
 		registerSocketEvent(socket, 'userInAnotherCall', function(sentData) {
 			socket.broadcast.to(sentData.id).emit('userInAnotherCall', sentData);
 		});
-		
-		registerSocketEvent(socket, 'typingRoom', function(sentData) {			
-			//check id the socket.id that sent this is in the room.  
+
+		registerSocketEvent(socket, 'typingRoom', function(sentData) {
+			//check id the socket.id that sent this is in the room.
 			sentData.sender = socket.conn.id;
 			io.to(sentData.roomName).emit('typingRoom', sentData);
-			
+
 		});
 
 		registerSocketEvent(socket, 'status change', function(sentData) {
@@ -327,17 +311,19 @@
 		return false;
 
 	}
+
+
 	app.use(handlers.routeHandlers.routeErrorHandler);
-	app.get('/', handlers.routeHandlers.chatTemplateFile);	
+	app.get('/', handlers.routeHandlers.chatTemplateFile);
 	app.get('/active/:username', handlers.routeHandlers.chatTemplateFileForUsername);
-	
-	http.listen(3000, function() {
-		console.log('Server started on PORT :3000');
+
+	http.listen(config.port, function() {
+		console.log('Server started on PORT:'+config.port);
 	});
-	
+
 	//Tried config for signalling server, turn and stun
 	//var server = app.listen(3001);
 	//var config = {};
-   // sockets(server, config); // config is the same that server.js uses
+	// sockets(server, config); // config is the same that server.js uses
 
 })();

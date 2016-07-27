@@ -92,7 +92,6 @@ $(document).ready(function() {
 		 * Initialization for app variables and more
 		 */
 		var socket = io(),
-		    ss = require('socket.io-stream'),
 		    data = {},
 		    username,
 		    connections = [],
@@ -107,8 +106,6 @@ $(document).ready(function() {
 				ROOM : 2
 			}
 		},
-		    stream = ss.createStream(),
-		    filename = 'background.png',
 		    fs = require('fs'),
 		    statuses = $("#chat-status>option").map(function() {
 			var val = $(this).val().toString();
@@ -690,6 +687,8 @@ $(document).ready(function() {
 		 */
 		socket.on('userInAnotherCall', function(data){
 			//remove calling-keyonclient and print message accordingly
+			currentVideoContainer = '#chatWindow-';
+			console.log("on user in another call ",currentVideoContainer);
 			var connectionKeyOnClient;
 			for (var key in connections) {
 				if (connections[key].id == "/#" + data.me) {
@@ -705,6 +704,7 @@ $(document).ready(function() {
 				$('#messages-' + connectionKeyOnClient).append($("<li>").html("(" + (new Date()).toLocaleTimeString() + ") <b>" + connections[connectionKeyOnClient].username + " is currently engaged in another call. The user was notified of your intention to chat.</b>"));
 			}
 			helperFunctions.addCallButtonForOpenedWindows();
+			helperFunctions.updateScroll(connectionKeyOnClient);
 		});
 		
 		
@@ -716,6 +716,7 @@ $(document).ready(function() {
 		webrtc.on('videoAdded', function(video, peer) {
 			var remotes;
 			remotes = $(currentVideoContainer);
+			console.log("on video added ",currentVideoContainer);
 			if (remotes) {
 				var container = $('<div>').addClass('videoContainer').attr({
 					'id' : 'container-' + webrtc.getDomId(peer)
@@ -763,6 +764,7 @@ $(document).ready(function() {
 		 * 3.Resize window and add call option for opened windows again
 		 */
 		webrtc.on('videoRemoved', function(video, peer) {
+			console.log("on video removed ",currentVideoContainer);
 			var keyOnClient = currentVideoContainer.split('-')[1];
 			webrtc.leaveRoom();
 			$('#container-' + webrtc.getDomId(peer)).remove();
@@ -816,7 +818,8 @@ $(document).ready(function() {
 		 */
 		this.stopCalling = function(data) {
 			var connectionKeyOnClient = data.split("-")[1];
-
+			currentVideoContainer = '#chatWindow-';
+			console.log("on stop calling ",currentVideoContainer);
 			if ($('.calling-item').length) {
 				$('.calling-item').remove();
 				//remove option to stop calling person.
@@ -840,7 +843,7 @@ $(document).ready(function() {
 		 * If window was previously closed, just reopen and show that call was stopped
 		 */
 		socket.on('callStopped', function(data) {
-
+			console.log("on call stopped ",currentVideoContainer);
 			var connectionKeyOnClient;
 			for (var key in connections) {
 				if (connections[key].id == "/#" + data.me) {
@@ -867,7 +870,7 @@ $(document).ready(function() {
 		 * 3.Emit event for callRejection
 		 */
 		this.rejectCall = function(data) {
-
+			console.log("on reject call ",currentVideoContainer);
 			var connectionKeyOnClient = data.split("-")[1];
 			$('#answear-reject-' + connectionKeyOnClient).remove();
 			data = {
@@ -878,6 +881,7 @@ $(document).ready(function() {
 			socket.emit('callRejected', data);
 			helperFunctions.updateScroll(connectionKeyOnClient);
 			helperFunctions.addCallButtonForOpenedWindows();
+			helperFunctions.updateScroll(connectionKeyOnClient);
 		};
 
 		/**
@@ -914,6 +918,7 @@ $(document).ready(function() {
 			if (currentVideoContainer.split("-")[1] === "") {
 				currentVideoContainer += connectionKeyOnClient;
 			}
+			console.log("on call accepted ",currentVideoContainer);
 
 			if ($('.calling-item').length) {
 				$('.calling-item').remove();
@@ -940,6 +945,7 @@ $(document).ready(function() {
 		 * Remove button for call pending, waiting for an answear ( stop calling person option )
 		 */
 		socket.on('callRejected', function(data) {
+			console.log("on call rejected ",currentVideoContainer);
 			var connectionKeyOnClient;
 			for (var key in connections) {
 				if (connections[key].id == "/#" + data.me) {
@@ -973,7 +979,7 @@ $(document).ready(function() {
 			webrtc.leaveRoom();
 			var connectionKeyOnClient = person.split("-")[1];
 			console.log("key on client ", connectionKeyOnClient);
-
+			console.log("on call person ",currentVideoContainer);
 			if (currentVideoContainer.split("-")[1] === "") {
 				currentVideoContainer += connectionKeyOnClient;
 			}
