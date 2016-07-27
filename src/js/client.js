@@ -658,25 +658,56 @@ $(document).ready(function() {
 				}
 			}
 
-			if (!connections[connectionKeyOnClient].opened || connections[connectionKeyOnClient].opened == false) {
-				createNewChatWindow(connectionKeyOnClient, connections[connectionKeyOnClient], global.windowTypes.CHAT);
+			helperFunctions.openWindowForInfoIfClosed(connectionKeyOnClient);
 
-				addEventListener('#writtenText-' + connectionKeyOnClient, 'keyup', keyUpHandler);
-
+			//maybe say that the user is trying to call, you should call this user back after ending current call
+			//and maybe just hit return after posting the message
+			if ($('.videoContainer').length || $('.calling-item').length || $('.answear-reject').length) {
+				$('#messages-' + connectionKeyOnClient).append($("<li>").html("Hi ! wanna talk ? (" + (new Date()).toLocaleTimeString() + ") <b>" + connections[connectionKeyOnClient].username + " is trying to call you. If you want to answear, please end current call or stop/reject other calls already in progress.</b>"));
+				//launch event and say that user in currentyl busy in another call
+				data = {
+					id : connections[connectionKeyOnClient].id,
+					me : socket.id
+				};
+				socket.emit('userInAnotherCall', data);
+				return;
 			}
 
-			el = $('#writtenText-' + connectionKeyOnClient);
-
-			$('#messages-' + connectionKeyOnClient).append($("<li id='answear-reject-" + connectionKeyOnClient + "'>").html("Hi ! wanna talk ? (" + (new Date()).toLocaleTimeString() + ")" + "<button class='btn btn-success' onclick='acceptCall(this.id)' id='answear-" + connectionKeyOnClient + "'>Answear</button>" + "<button class='btn btn-danger' onclick='rejectCall(this.id)' id='reject-" + connectionKeyOnClient + "'>Reject</button>"));
-
-			if (!el.is(":focus")) {
-				helperFunctions.shakeAnimation($('#chatWindow-' + connectionKeyOnClient));
+			if (!$("#answear-reject-" + connectionKeyOnClient).length) {
+				$('#messages-' + connectionKeyOnClient).append($("<li class='answear-reject' id='answear-reject-" + connectionKeyOnClient + "'>").html("Hi ! wanna talk ? (" + (new Date()).toLocaleTimeString() + ")" + "<button class='btn btn-success' onclick='acceptCall(this.id)' id='answear-" + connectionKeyOnClient + "'>Answear</button>" + "<button class='btn btn-danger' onclick='rejectCall(this.id)' id='reject-" + connectionKeyOnClient + "'>Reject</button>"));
+			} else {
+				//this guy is really insisting on calling you
 			}
 
+			helperFunctions.removeCallButtonForOpenedWindow(connectionKeyOnClient);
 			helperFunctions.updateScroll(connectionKeyOnClient);
-
-
 		});
+		
+		
+		/**
+		 * User is currently in another call
+		 * Print message ( open window if it was closed in the meantime )
+		 */
+		socket.on('userInAnotherCall', function(data){
+			//remove calling-keyonclient and print message accordingly
+			var connectionKeyOnClient;
+			for (var key in connections) {
+				if (connections[key].id == "/#" + data.me) {
+					connectionKeyOnClient = key;
+					break;
+				}
+			}
+			if($("#calling-" + connectionKeyOnClient).length){
+				$("#calling-" + connectionKeyOnClient).remove();
+				$('#messages-' + connectionKeyOnClient).append($("<li>").html("(" + (new Date()).toLocaleTimeString() + ") <b>" + connections[connectionKeyOnClient].username + " is currently engaged in another call. The user was notified of your intention to chat.</b>"));
+			}else{
+				helperFunctions.openWindowForInfoIfClosed(connectionKeyOnClient);
+				$('#messages-' + connectionKeyOnClient).append($("<li>").html("(" + (new Date()).toLocaleTimeString() + ") <b>" + connections[connectionKeyOnClient].username + " is currently engaged in another call. The user was notified of your intention to chat.</b>"));
+			}
+			helperFunctions.addCallButtonForOpenedWindows();
+		});
+		
+		
 		/**
 		 * On video added event
 		 * Append video container to corresponding window
@@ -762,9 +793,7 @@ $(document).ready(function() {
 			$(currentVideoContainer).css({
 				'width' : 800
 			});
-			/**
-			 * openWindow if meanwhile the window was closed by the other peer
-			 */
+
 			data = {
 				id : connections[connectionKeyOnClient].id,
 				me : socket.id
@@ -780,6 +809,56 @@ $(document).ready(function() {
 			helperFunctions.updateScroll(connectionKeyOnClient);
 			//remove all except this one
 		};
+
+		/**
+		 * Stop calling the current person
+		 * Remove Stop call option from screen
+		 */
+		this.stopCalling = function(data) {
+			var connectionKeyOnClient = data.split("-")[1];
+
+			if ($('.calling-item').length) {
+				$('.calling-item').remove();
+				//remove option to stop calling person.
+				$('#messages-' + connectionKeyOnClient).append($('<li>').html(" (" + (new Date()).toLocaleTimeString() + "): " + "You stopped calling."));
+				helperFunctions.updateScroll(connectionKeyOnClient);
+				helperFunctions.addCallButtonForOpenedWindows();
+			}
+
+			data = {
+				to : connections[connectionKeyOnClient].id,
+				me : socket.id
+			};
+
+			socket.emit('callStopped', data);
+
+		};
+
+		/**
+		 * Call stopped event
+		 * Remove possibiliy and answear or reject call because call was stopped.
+		 * If window was previously closed, just reopen and show that call was stopped
+		 */
+		socket.on('callStopped', function(data) {
+
+			var connectionKeyOnClient;
+			for (var key in connections) {
+				if (connections[key].id == "/#" + data.me) {
+					connectionKeyOnClient = key;
+					break;
+				}
+			}
+			console.log('#answear-reject-' + connectionKeyOnClient);
+			if ($('#answear-reject-' + connectionKeyOnClient).length) {
+				$('#answear-reject-' + connectionKeyOnClient).remove();
+				$('#messages-' + connectionKeyOnClient).append($('<li>').html(" (" + (new Date()).toLocaleTimeString() + "): " + "Peer has stopped calling."));
+			} else {
+				helperFunctions.openWindowForInfoIfClosed(connectionKeyOnClient);
+				$('#messages-' + connectionKeyOnClient).append($('<li>').html(" (" + (new Date()).toLocaleTimeString() + "): " + "Peer has stopped calling."));
+			}
+			helperFunctions.updateScroll(connectionKeyOnClient);
+			helperFunctions.addCallButtonForOpenedWindows();
+		});
 
 		/**
 		 * Reject call from a user
@@ -798,7 +877,7 @@ $(document).ready(function() {
 			$('#messages-' + connectionKeyOnClient).append($('<li>').html(" (" + (new Date()).toLocaleTimeString() + "): " + "You rejected the call..."));
 			socket.emit('callRejected', data);
 			helperFunctions.updateScroll(connectionKeyOnClient);
-
+			helperFunctions.addCallButtonForOpenedWindows();
 		};
 
 		/**
@@ -820,6 +899,7 @@ $(document).ready(function() {
 		 * The call was accepted
 		 * 1. Prepare window for call, enlarge and add click event for end call.
 		 * 2.Check if window was closed by user, open window in order to start video
+		 * 3.Call was accepted so remove the stop calling button
 		 */
 		socket.on('callAccepted', function(data) {
 			var connectionKeyOnClient;
@@ -829,14 +909,18 @@ $(document).ready(function() {
 					break;
 				}
 			}
+
 			console.log(currentVideoContainer, currentVideoContainer.split("-").length, currentVideoContainer.split("-")[1]);
 			if (currentVideoContainer.split("-")[1] === "") {
 				currentVideoContainer += connectionKeyOnClient;
 			}
 
-			//TODO create function for this piece of code
+			if ($('.calling-item').length) {
+				$('.calling-item').remove();
+				//remove option to stop calling person.
+			}
+
 			helperFunctions.openWindowForInfoIfClosed(connectionKeyOnClient);
-			//untill here
 
 			$(currentVideoContainer).css({
 				'width' : 800
@@ -853,6 +937,7 @@ $(document).ready(function() {
 		 * Print message to corresponding window
 		 * Add call button option for opened windows
 		 * reopen window and print message for rejected
+		 * Remove button for call pending, waiting for an answear ( stop calling person option )
 		 */
 		socket.on('callRejected', function(data) {
 			var connectionKeyOnClient;
@@ -862,11 +947,13 @@ $(document).ready(function() {
 					break;
 				}
 			}
-			/**
-			 * openWindow if meanwhile the window was closed by the other peer
-			 * add call button again for all windows.
-			 */
+
 			helperFunctions.openWindowForInfoIfClosed(connectionKeyOnClient);
+
+			if ($('.calling-item').length) {
+				$('.calling-item').remove();
+				//remove option to stop calling person.
+			}
 
 			$('#messages-' + connectionKeyOnClient).append($('<li>').html(" (" + (new Date()).toLocaleTimeString() + "): " + "Call was rejected by peer."));
 			helperFunctions.addCallButtonForOpenedWindows();
@@ -886,12 +973,19 @@ $(document).ready(function() {
 			webrtc.leaveRoom();
 			var connectionKeyOnClient = person.split("-")[1];
 			console.log("key on client ", connectionKeyOnClient);
-			currentVideoContainer += connectionKeyOnClient;
+
+			if (currentVideoContainer.split("-")[1] === "") {
+				currentVideoContainer += connectionKeyOnClient;
+			}
+
 			data = {
 				id : connections[connectionKeyOnClient].id,
 				me : socket.id
 			};
-			$('#messages-' + connectionKeyOnClient).append($('<li>').html(" (" + (new Date()).toLocaleTimeString() + "): " + "Calling...waiting for peer to answear"));
+
+			if (!$("#calling-" + connectionKeyOnClient).length) {
+				$('#messages-' + connectionKeyOnClient).append($("<li class='calling-item' id ='calling-" + connectionKeyOnClient + "'>").html(" (" + (new Date()).toLocaleTimeString() + "): " + "Calling...waiting for peer to answear" + "<button class='btn btn-danger' onclick='stopCalling(this.id)' id='stop-" + connectionKeyOnClient + "'>STOP</button>"));
+			}
 
 			socket.emit('call', data);
 			webrtc.joinRoom(connections[connectionKeyOnClient].id + "/#" + socket.id);
@@ -1065,7 +1159,7 @@ $(document).ready(function() {
 			pageHeader.append(closeButton);
 
 			if (type === global.windowTypes.CHAT) {
-				if ($('.videoContainer').length) {
+				if ($('.videoContainer').length || $('.calling-item').length || $('.answear-reject').length) {//call pending or call already existing
 					optionsContainer.append(buzzButton);
 				} else {
 					optionsContainer.append(buzzButton, callButton);

@@ -238,6 +238,14 @@
 			socket.broadcast.to(sentData.to).emit('typing', sentData);
 		});
 		
+		registerSocketEvent(socket, 'callStopped', function(sentData) {
+			socket.broadcast.to(sentData.to).emit('callStopped', sentData);
+		});
+		
+		registerSocketEvent(socket, 'userInAnotherCall', function(sentData) {
+			socket.broadcast.to(sentData.id).emit('userInAnotherCall', sentData);
+		});
+		
 		registerSocketEvent(socket, 'typingRoom', function(sentData) {			
 			//check id the socket.id that sent this is in the room.  
 			sentData.sender = socket.conn.id;
