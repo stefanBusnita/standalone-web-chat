@@ -8,13 +8,13 @@
 		<script src="http://code.jquery.com/ui/1.9.2/jquery-ui.js"></script>
 		<script src="/socket.io/socket.io.js"></script>
 		<script src="/scripts/findem.min.js"></script>
-		<script src="/tst/simplewebrtc.bundle.js"></script> 
-		<!-- <script src="https://simplewebrtc.com/latest-v2.js"></script> --> 
+		<script src="/tst/simplewebrtc.bundle.js"></script>
+		<!-- <script src="https://simplewebrtc.com/latest-v2.js"></script> -->
 		<link rel="stylesheet" type="text/css" href="/styles/client.css">
 		<link rel="stylesheet" type="text/css" href="/node/css/flag-icon.css">
 	</head>
 	<body>
-        
+
 		<div class="modal fade" name="modal-user" id="myModal" role="dialog">
 			<div class="modal-dialog">
 
@@ -54,8 +54,8 @@
 					</div>
 					<div class="modal-body">
 						Notifications status : <span id="notification-status"></span>
-						
-						<h5>Notifications for :</h5> 
+
+						<h5>Notifications for :</h5>
 						<div class="checkbox">
 							<label>
 								<input type="checkbox" id="notification-option-lobby">
@@ -202,7 +202,16 @@
 			<ul id="rooms" ></ul>
 		</div>
 		<div class="chat-local-video">
-		<video height="300" width="300" id="localVideo"></video>
+			<video height="300" width="300" id="localVideo"></video>
+			<button class="btn btn-default local-control-button" id="local-all-sound-video-button" title="Stop sending audio and video to peers"  onclick="manageAll()">
+				<span class="glyphicon glyphicon-pause" id="local-all-sound-video-icon"></span>
+			</button>
+			<button class="btn btn-default local-control-button" id="local-sound-button" title="Stop sending audio to peers"  onclick="manageLocalSound()">
+				<span class="glyphicon glyphicon-volume-off" id="local-sound-icon"></span>
+			</button>
+			<button class="btn btn-default local-control-button" id="local-video-button" title="Stop sending video to peers"  onclick="manageLocalVideo()">
+				<span class="glyphicon glyphicon-facetime-video" id="local-video-icon"></span>
+			</button>
 		</div>
 	</body>
 </html>

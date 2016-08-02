@@ -13,7 +13,7 @@
 	    express = require("express"),
 	    data = {},
 	    noUsers = 0,
-	    mySuperNotSoSecretKey = 'B4c0/\/ with some secret key 123' + new Date().toString(), // USE DB IF THIS DOES NOT SUITE YOUR NEEDS :)
+	    mySuperNotSoSecretKey = 'B4c0/\/ with some secret key 123' + new Date().toString(), // USE DB IF THIS DOES NOT SUIT YOUR NEEDS :)
 	    wrongPasswordMessage = "Wrong password ! Gotcha ! :)";
 
 	app.use(compression({

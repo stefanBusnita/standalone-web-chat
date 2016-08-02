@@ -137,7 +137,7 @@ height : 444px;
 }
 .messagesContainer {
 	background-color: white;
-	width: 393px;
+	width: 394px;
 	height: 350px;
 	overflow-y: scroll;
 	border-radius: 1px;
@@ -322,7 +322,7 @@ transform: translate3d(4px, 0, 0);
 }
 .chat-local-video {
 	width: 288px;
-	height: 215px;
+	height: 241px;
 	position: absolute;
 	margin-top: 197px;
 	border: 2px solid;
@@ -338,4 +338,12 @@ transform: translate3d(4px, 0, 0);
 	height: 204px;
 	padding-top: 5px;
 	width: 281px;
+}
+.local-control-button {
+	margin-top: 1px;
+	width: 28px;
+	padding: 0px;
+	margin: 3px 3px 3px 7px;
+	height: 27px;
+	background-color:rgb(255,255,255);
 }
