@@ -784,7 +784,7 @@ $(document).ready(function() {
 			helperFunctions.addCallButtonForOpenedWindows();
 			helperFunctions.updateScroll(keyOnClient);
 		});
-		
+
 		/**
 		 * Stop/Start local sound
 		 */
@@ -862,7 +862,7 @@ $(document).ready(function() {
 		 * Mute event, user is notified with a message.
 		 */
 		webrtc.on('mute', function(data) {
-			
+
 			webrtc.getPeers(data.id).forEach(function(peer) {
 				if (data.name == 'audio') {
 					$('#videocontainer_' + webrtc.getDomId(peer) + ' .muted').show();
@@ -871,13 +871,13 @@ $(document).ready(function() {
 					$('#videocontainer_' + webrtc.getDomId(peer) + ' video').hide();
 				}
 			});
-			
+
 		});
 		/**
 		 * Unmute event, user is notified with a mesage
 		 */
 		webrtc.on('unmute', function(data) {
-			
+
 			webrtc.getPeers(data.id).forEach(function(peer) {
 				if (data.name == 'audio') {
 					$('#videocontainer_' + webrtc.getDomId(peer) + ' .muted').hide();
@@ -886,7 +886,7 @@ $(document).ready(function() {
 					$('#videocontainer_' + webrtc.getDomId(peer) + ' .paused').hide();
 				}
 			});
-			
+
 		});
 
 		/**
@@ -1250,6 +1250,10 @@ $(document).ready(function() {
 			    closeButton = $("<input class='btn-danger btn chat-window-close'  type = 'button' value='X'/>").attr({
 				'id' : 'close-' + key.toString(),
 				'onclick' : "removeChatWindow(this.id," + type + ")"
+			}),
+			    minimizeButton = $("<input class='btn-default btn chat-window-minimize'  type = 'button' value='_'/>").attr({
+				'id' : 'minimize-' + key.toString(),
+				'onclick' : "minimizeChatWindow(this.id," + type + ")"
 			});
 			pageHeader = $("<div class='pageHeader' id='main-lobby-header'>").text(pageHeaderText),
 			optionsContainer = $("<div class='chat-options-container'></div>").attr({
@@ -1278,7 +1282,7 @@ $(document).ready(function() {
 
 			messagesContainer.append(list);
 			form.append(sendButton, textToSend);
-			pageHeader.append(closeButton);
+			pageHeader.append(closeButton, minimizeButton);
 
 			if (type === global.windowTypes.CHAT) {
 				if ($('.videoContainer').length || $('.calling-item').length || $('.answear-reject').length) {//call pending or call already existing
@@ -1330,6 +1334,52 @@ $(document).ready(function() {
 				$("." + classType + ":not(#" + classType + "-" + key.toString() + ")").css("z-index", max - 1);
 
 			});
+		};
+
+		this.minimizeChatWindow = function(id, type) {
+			var key,
+			    button,
+			    buttonText;
+			if (id) {
+				key = id.split('-')[1];
+
+				if (type === global.windowTypes.ROOM) {
+					$('#roomWindow-' + key).slideUp("slow");
+					buttonText = 'Room '+key;
+				} else {
+					$('#chatWindow-' + key).slideUp("slow");
+					buttonText = 'Chat '+connections[key].username;
+				}
+
+				button = $("<button class='btn btn-default' onclick='reopenWindow(this.id)'>" + buttonText + "</button>").attr({
+					'id' : 'reopen-' + key,
+					'type' : type
+				});
+
+			} else {
+				$('#chatWindow-all').slideUp("slow");
+				button = $("<button class='btn btn-default' onclick='reopenWindow()'>Main Lobby</button>").attr({
+					'id' : 'reopen'
+				});
+			}
+			$('#minimize-container').append(button);
+		};
+
+		this.reopenWindow = function(id) {
+			var key;
+
+			if (id) {
+				key = id.split('-')[1];
+				if ($('#reopen-' + key).attr('type') == global.windowTypes.ROOM) {
+					$('#roomWindow-' + key).slideDown("slow");
+				} else {
+					$('#chatWindow-' + key).slideDown("slow");
+				}
+				$('#reopen-' + key).remove();
+			} else {
+				$('#chatWindow-all').slideDown("slow");
+				$('#reopen').remove();
+			}
 		};
 
 		/**

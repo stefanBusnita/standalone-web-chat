@@ -169,6 +169,18 @@ height : 444px;
 	height: inherit;
 	width: 25px;
 }
+.chat-window-minimize {
+	float: right;
+	padding: 0px;
+	height: inherit;
+	width: 25px;
+}
+#minimize-container{
+	position:absolute;
+	float:left;
+	bottom:0;
+	width:100%
+}
 @keyframes shake {
 10%, 90% {
 transform: translate3d(-1px, 0, 0);
