@@ -369,25 +369,23 @@ $(document).ready(function() {
 			},
 			updateRoomUsersList : function(room) {
 				if ( typeof room != 'object') {//update for one room only
-					var roomUsersList = $('#users-' + room);
-					roomUsersList.empty();
 
-					if (rooms[room].users.length == 0) {
-						console.log("no more users in the room, we can close the room");
-						//send disable event for input text area
-					}
+					if (rooms[room]) {
+						var roomUsersList = $('#users-' + room);
+						roomUsersList.empty();
 
-					for (var i = 0; i < rooms[room].users.length; i++) {
+						for (var i = 0; i < rooms[room].users.length; i++) {
 
-						for (var k in connections) {
-							if (connections[k].id == '/#' + rooms[room].users[i]) {
-								var li = $("<li id='roomUser" + room + "-" + connections[k].username + "'>").html(connections[k].username);
-								break;
+							for (var k in connections) {
+								if (connections[k].id == '/#' + rooms[room].users[i]) {
+									var li = $("<li id='roomUser" + room + "-" + connections[k].username + "'>").html(connections[k].username);
+									break;
+								}
 							}
+							roomUsersList.append(li);
 						}
-						roomUsersList.append(li);
-					}
 
+					}
 				} else {
 					for (var k in joinedRooms) {
 
@@ -589,6 +587,7 @@ $(document).ready(function() {
 		 * Trigger for leave room event
 		 */
 		this.leaveRoom = function(id) {
+			console.log(id)
 			var roomId = id.split("-")[1];
 			helperFunctions.hideButtons(roomId);
 			delete joinedRooms[roomId];
@@ -1107,6 +1106,8 @@ $(document).ready(function() {
 
 			if (!$("#calling-" + connectionKeyOnClient).length) {
 				$('#messages-' + connectionKeyOnClient).append($("<li class='calling-item' id ='calling-" + connectionKeyOnClient + "'>").html(" (" + (new Date()).toLocaleTimeString() + "): " + "Calling...waiting for peer to answear" + "<button class='btn btn-danger' onclick='stopCalling(this.id)' id='stop-" + connectionKeyOnClient + "'>STOP</button>"));
+
+				helperFunctions.updateScroll(connectionKeyOnClient);
 			}
 
 			socket.emit('call', data);
@@ -1181,7 +1182,7 @@ $(document).ready(function() {
 
 		/**
 		 * Is typing event
-		 * Search user in roomUsersList and add a color that shows he is typing
+		 * Search user in roomUsersList and show he/she is typing
 		 * Use a few seconds of delay after the user stopped typing
 		 */
 		socket.on('typingRoom', function(data) {
@@ -1195,20 +1196,17 @@ $(document).ready(function() {
 						break;
 					}
 				}
-				//TODO id the room is not opened ( the window ), don;t append anything, don;t do anything
 
-				var value = $('#roomUser' + data.roomName + "-" + connections[connectionKeyOnClient].username).text(),
-				    pattern = new RegExp("^.*typing\.{3}$");
-				console.log(pattern.test(value), value);
-				if (pattern.test(value)) {
-					console.log("still typing");
+				var value = $('#roomUser' + data.roomName + "-" + connections[connectionKeyOnClient].username).text();
+
+				if (value.match(/(typing\.{3})/g) != null && value.match(/(typing\.{3})/g).length > 0) {
+					//console.log("still typing don't do stuff");
 				} else {
-					console.log("now we can do stuff typing stopped");
 					$('#roomUser' + data.roomName + "-" + connections[connectionKeyOnClient].username).text(value + " typing....");
 				}
 
 				clearTimeout(roomTimeoutCheck[connectionKeyOnClient]);
-				//it should be an array here
+
 				roomTimeoutCheck[connectionKeyOnClient] = setTimeout(function() {
 					$('#roomUser' + data.roomName + "-" + connections[connectionKeyOnClient].username).text(connections[connectionKeyOnClient].username);
 					roomTimeoutCheck[connectionKeyOnClient] = undefined;
@@ -1345,10 +1343,10 @@ $(document).ready(function() {
 
 				if (type === global.windowTypes.ROOM) {
 					$('#roomWindow-' + key).slideUp("slow");
-					buttonText = 'Room '+key;
+					buttonText = 'Room ' + key;
 				} else {
 					$('#chatWindow-' + key).slideUp("slow");
-					buttonText = 'Chat '+connections[key].username;
+					buttonText = 'Chat ' + connections[key].username;
 				}
 
 				button = $("<button class='btn btn-default' onclick='reopenWindow(this.id)'>" + buttonText + "</button>").attr({
@@ -1600,12 +1598,15 @@ $(document).ready(function() {
 		 *  */
 		socket.on('update rooms', function(data) {
 			for (var key in rooms) {
-				if (rooms[key].opened) {
+
+				if (rooms[key] && rooms[key].opened) {
 					data[key].opened = rooms[key].opened;
 				}
+
 				if (joinedRooms[key]) {
 					joinedRooms[key] = data[key];
 				}
+
 			}
 
 			rooms = data;
@@ -1614,86 +1615,82 @@ $(document).ready(function() {
 
 			for (var key in rooms) {
 
-				if (rooms[key].users.length == 0) {
-					console.log("there is a room with no more users ! send event to server to close it !");
-					//maybe compose a timeout for it
-					//add to a temporary list each room
-					//send event for deletion at the end of the loop
-				}
+				if (rooms[key]) {
 
-				roomType = rooms[key].private ? "private" : "public";
+					roomType = rooms[key].private ? "private" : "public";
 
-				var li = $('<li>').addClass("room").attr('id', key.toString()).html(rooms[key].room + " Members:" + rooms[key].users.length);
+					var li = $('<li>').addClass("room").attr('id', key.toString()).html(rooms[key].room + " Members:" + rooms[key].users.length);
 
-				$('#rooms').append(li);
+					$('#rooms').append(li);
 
-				$("#" + key.toString()).addClass(roomType);
+					$("#" + key.toString()).addClass(roomType);
 
-				$("#" + key.toString()).removeClass('room');
-				$("#" + key.toString()).addClass('room');
+					$("#" + key.toString()).removeClass('room');
+					$("#" + key.toString()).addClass('room');
 
-				//add event listeners
+					//add event listeners
 
-				addEventListener('#' + key.toString(), 'click', function(event) {
+					addEventListener('#' + key.toString(), 'click', function(event) {
 
-					clearTimeout(buttonsTimeout[event.target.id]);
-					delete buttonsTimeout[event.target.id];
+						clearTimeout(buttonsTimeout[event.target.id]);
+						delete buttonsTimeout[event.target.id];
 
-					var join = $("<input class='btn-success btn room-button pull-right'  type = 'button' value='Join'/>").attr({
-						"id" : 'join-' + event.target.id,
-						"onclick" : "joinRoom(this.id)"
-					}),
-					    leave = $("<input class='btn-warning btn room-button pull-right'  type = 'button' value='Leave'/>").attr({
-						"id" : 'leave-' + event.target.id,
-						"onclick" : "leaveRoom(this.id)"
-					});
+						var join = $("<input class='btn-success btn room-button pull-right'  type = 'button' value='Join'/>").attr({
+							"id" : 'join-' + event.target.id,
+							"onclick" : "joinRoom(this.id)"
+						}),
+						    leave = $("<input class='btn-warning btn room-button pull-right'  type = 'button' value='Leave'/>").attr({
+							"id" : 'leave-' + event.target.id,
+							"onclick" : "leaveRoom(this.id)"
+						});
 
-					if (joinedRooms[event.target.id]) {
+						if (joinedRooms[event.target.id]) {
 
-						$("#leave-" + event.target.id).length > 0 ? "" : leave.appendTo($("#" + event.target.id)).animate({
-							opacity : '0.2'
+							$("#leave-" + event.target.id).length > 0 ? "" : leave.appendTo($("#" + event.target.id)).animate({
+								opacity : '0.2'
+							}, 5000);
+							//TODO add open button
+						} else {
+
+							$("#leave-" + event.target.id).length > 0 && $("#join-" + event.target.id).length > 0 ? "" : (function() {
+								leave.appendTo($("#" + event.target.id)).animate({
+									opacity : '0.2'
+								}, 5000);
+								join.appendTo($("#" + event.target.id)).animate({
+									opacity : '0.2'
+								}, 5000);
+							})();
+
+						}
+
+						buttonsTimeout[event.target.id] = setTimeout(function() {
+							$("#leave-" + event.target.id).remove();
+							$("#join-" + event.target.id).remove();
 						}, 5000);
-						//TODO add open button
-					} else {
 
-						$("#leave-" + event.target.id).length > 0 && $("#join-" + event.target.id).length > 0 ? "" : (function() {
-							leave.appendTo($("#" + event.target.id)).animate({
-								opacity : '0.2'
-							}, 5000);
-							join.appendTo($("#" + event.target.id)).animate({
-								opacity : '0.2'
-							}, 5000);
-						})();
+						event.stopPropagation();
+					}, false);
 
-					}
+					addEventListener('#' + key.toString(), 'dblclick', function(event) {
 
-					buttonsTimeout[event.target.id] = setTimeout(function() {
-						$("#leave-" + event.target.id).remove();
-						$("#join-" + event.target.id).remove();
-					}, 5000);
+						if (joinedRooms[event.target.id]) {
 
-					event.stopPropagation();
-				}, false);
+							!rooms[(event.target.id).toString()].opened ? createNewChatWindow(event.target.id, rooms, global.windowTypes.ROOM) : (function() {
+								var element = $("#roomWrittenText-" + (event.target.id).toString());
+								helperFunctions.shakeAnimation(element);
+								element.focus();
 
-				addEventListener('#' + key.toString(), 'dblclick', function(event) {
+							})();
+							addEventListener('#roomWrittenText-' + event.target.id, 'keyup', keyUpHandlerRooms);
 
-					if (joinedRooms[event.target.id]) {
+						} else {
+							$("#" + event.target.id).click();
+						}
 
-						!rooms[(event.target.id).toString()].opened ? createNewChatWindow(event.target.id, rooms, global.windowTypes.ROOM) : (function() {
-							var element = $("#roomWrittenText-" + (event.target.id).toString());
-							helperFunctions.shakeAnimation(element);
-							element.focus();
+						event.stopPropagation();
+					}, false);
 
-						})();
-						addEventListener('#roomWrittenText-' + event.target.id, 'keyup', keyUpHandlerRooms);
-
-					} else {
-						$("#" + event.target.id).click();
-					}
-
-					event.stopPropagation();
-				}, false);
-
+				}
 			}
 
 			//

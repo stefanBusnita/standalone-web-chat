@@ -80,10 +80,13 @@
 			socket.leave(data);
 			for (var i = 0; i < rooms[data].users.length; i++) {
 				if (rooms[data].users[i] == socket.conn.id) {
-					rooms[data].users.splice(1, i);
+					rooms[data].users.splice(i,1);
 					break;
 				}
 			}
+			if(rooms[data].users.length==0){
+				delete rooms[data];
+			};
 			io.emit('update rooms', rooms);
 			io.emit('update room users', data);
 			//check if admin remove room from rooms list also
@@ -235,6 +238,12 @@
 			sentData.sender = socket.conn.id;
 			io.to(sentData.roomName).emit('typingRoom', sentData);
 
+		});
+		//TODO why da fuck no work ?
+		registerSocketEvent(socket, 'close room', function(sentData) {
+			console.log(rooms,sentDate);
+			delete rooms[sentData.roomName];
+			io.emit('update rooms', rooms);
 		});
 
 		registerSocketEvent(socket, 'status change', function(sentData) {
