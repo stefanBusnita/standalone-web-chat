@@ -1,4 +1,24 @@
-## Features
+##Features of Standalone-web-chat
+
+* desktop-like chat windows
+* chat with as many people as you want, organize windows
+* notifications for messages, buzz, calls
+* video conference
+* join a room and chat ( includes buzz for chat window )
+* create a room ( password protected or not ) 
+* information display on addressee activity (e.g is typing... has stopped typing...)
+* information display on all memebers in a chat room ( is typing... has stopped typing...)
+* change own status and declare yourself: available, busy....
+* status visibility in list of users, for each user
+* possibility to minimize chat window if the situation gets a bit cluttered
+
+##Disaclaimer
+
+* For information regarding the app, please view the docs/.docx file provided
+* Software is provided AS IS under LICENCE, please view LICENCE for more information
+* Software is not production ready atm
+
+## Features of HTML 5 BoilerPlate
 
 * HTML5 ready. Use the new elements with confidence.
 * Designed with progressive enhancement in mind.
