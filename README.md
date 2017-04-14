@@ -1,4 +1,4 @@
-##Features of Standalone-web-chat
+# Features of Standalone-web-chat
 
 * desktop-like chat windows
 * chat with as many people as you want, organize windows
@@ -12,8 +12,12 @@
 * status visibility in list of users, for each user
 * possibility to minimize chat window if the situation gets a bit cluttered
 
-##Disaclaimer
+# Documentation
+* There is a small documentation included, with snippets, if it helps.
 
+# Disaclaimer
+* The app was created in order to get acquainted with socket.js and express.js as a side-project on my own free time.
+* Spaghetti code still up for the fix (separate cookie logic and some more features)
 * For information regarding the app, please view the docs/.docx file provided
 * Software is provided AS IS under LICENCE, please view LICENCE for more information
 * Software is not production ready atm
